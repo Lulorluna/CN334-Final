@@ -2,8 +2,11 @@ from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.parsers import JSONParser
 from django.contrib.auth.models import User
-from user_management.models import Customer
+from user_management.models import *
 from user_management.serializers import CustomerSerializer
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 
 @csrf_exempt
@@ -27,3 +30,14 @@ def register(request):
         new_user.delete()
         return JsonResponse({"error": "data not valid"}, status=400)
     return JsonResponse({"error": "method not allowed."}, status=405)
+
+
+class CustomerView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, format=None):
+        customer_data = Customer.objects.get(user=request.user)
+        customer_serializer = CustomerSerializer(customer_data)
+        content = {"data": customer_serializer.data}
+
+        return Response(content)
