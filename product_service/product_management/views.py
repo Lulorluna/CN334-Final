@@ -1,13 +1,13 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from product_management.models import Product
 from product_management.serializers import ProductSerializer
 from rest_framework import status
 
 
 class ProductListView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request, format=None):
         products = Product.objects.all()
@@ -16,7 +16,7 @@ class ProductListView(APIView):
 
 
 class ProductDetailView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request, product_id, format=None):
         try:
