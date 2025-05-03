@@ -28,5 +28,24 @@ urlpatterns = [
         ProductDetailView.as_view(),
         name="product-detail",
     ),
+    path("api/orders/", UserOrderListView.as_view(), name="user-orders"),
+    path("api/orders/cart/", CartOrderView.as_view(), name="cart-orders"),
+    path(
+        "api/orders/products/",
+        ProductsInUserOrdersView.as_view(),
+        name="products-in-orders",
+    ),
     path("api/cart/add/", AddToCartView.as_view(), name="add-to-cart"),
+    path(
+        "api/cart/remove/<int:product_id>/",
+        RemoveFromCartView.as_view(),
+        name="remove-from-cart",
+    ),
+    path("api/order/confirm/", ConfirmOrderView.as_view(), name="confirm-order"),
+    path("api/shipping/", ShippingListView.as_view(), name="shipping-list"),
+    path(
+        "api/payment/<int:order_id>/",
+        PaymentByOrderView.as_view(),
+        name="payment-by-order",
+    ),
 ]

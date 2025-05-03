@@ -3,6 +3,7 @@ from product_management.models import Product
 from django.core.validators import MinValueValidator
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
+from django.contrib.auth.models import User
 
 
 # Create your models here.
@@ -16,19 +17,21 @@ class Shipping(models.Model):
 
 
 class Order(models.Model):
+    STATUS_CART = "cart"
     STATUS_PENDING = "pending"
     STATUS_PAID = "paid"
     STATUS_PROCESSING = "processing"
     STATUS_IN_TRANSIT = "in_transit"
     STATUS_SHIPPED = "shipped"
     STATUS_CHOICES = [
+        (STATUS_CART, "ตะกร้า"),
         (STATUS_PENDING, "รอชำระเงิน"),
         (STATUS_PAID, "ชำระเงินแล้ว"),
         (STATUS_PROCESSING, "กำลังเตรียมของ"),
         (STATUS_IN_TRANSIT, "กำลังจัดส่ง"),
         (STATUS_SHIPPED, "จัดส่งแล้ว"),
     ]
-    customer_id = models.IntegerField()
+    customer = models.ForeignKey(User, on_delete=models.CASCADE, default=1)
     shipping = models.ForeignKey(Shipping, on_delete=models.SET_NULL, null=True)
     shipping_address_id = models.IntegerField(null=True, blank=True)
     user_payment_method_id = models.IntegerField(null=True)
@@ -67,7 +70,9 @@ class ProductOrder(models.Model):
 
 
 class Payment(models.Model):
-    order = models.ForeignKey(Order, related_name="payments", on_delete=models.CASCADE)
+    order = models.OneToOneField(
+        Order, related_name="payment", on_delete=models.CASCADE
+    )
     user_payment_method_id = models.IntegerField(null=True)
     paid_at = models.DateTimeField(auto_now_add=True)
     amount = models.FloatField()
