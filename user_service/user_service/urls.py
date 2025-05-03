@@ -29,4 +29,17 @@ urlpatterns = [
     path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("api/myinfo/", CustomerView.as_view(), name="myinfo"),
+    path("api/user/<username>/", UserView.as_view()),
+    path("api/address/", AddressListCreateView.as_view(), name="address-list"),
+    path("api/address/<int:pk>/", AddressDetailView.as_view(), name="address-detail"),
+    path(
+        "api/payment/",
+        PaymentMethodListCreateView.as_view(),
+        name="paymentmethod-list-create",
+    ),
+    path(
+        "api/payment/<int:pk>/",
+        PaymentMethodDetailView.as_view(),
+        name="paymentmethod-detail",
+    ),
 ]

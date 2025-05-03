@@ -10,6 +10,7 @@ class Product(models.Model):
     category = models.CharField(max_length=255)
     production_date = models.DateField()
     expiration_date = models.DateField()
+    address = models.CharField(max_length=50, blank=True)
     available = models.BooleanField(default=True)
 
     def save(self, *args, **kwargs):

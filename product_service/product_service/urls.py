@@ -18,6 +18,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from product_management.views import *
+from order_management.views import *
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -27,4 +28,5 @@ urlpatterns = [
         ProductDetailView.as_view(),
         name="product-detail",
     ),
+    path("api/cart/add/", AddToCartView.as_view(), name="add-to-cart"),
 ]
