@@ -14,9 +14,38 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+
 from django.contrib import admin
 from django.urls import path
+from product_management.views import *
+from order_management.views import *
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path("admin/", admin.site.urls),
+    path("api/product/all/", ProductListView.as_view(), name="product-list"),
+    path(
+        "api/product/<int:product_id>/",
+        ProductDetailView.as_view(),
+        name="product-detail",
+    ),
+    path("api/history/", UserOrderListView.as_view(), name="user-orders"),
+    path("api/orders/cart/", CartOrderView.as_view(), name="cart-orders"),
+    path(
+        "api/orders/products/<int:order_id>",
+        ProductsInUserOrdersView.as_view(),
+        name="products-in-orders",
+    ),
+    path("api/cart/add/", AddToCartView.as_view(), name="add-to-cart"),
+    path(
+        "api/cart/remove/<int:product_id>/",
+        RemoveFromCartView.as_view(),
+        name="remove-from-cart",
+    ),
+    path("api/order/confirm/", ConfirmOrderView.as_view(), name="confirm-order"),
+    path("api/shipping/", ShippingListView.as_view(), name="shipping-list"),
+    path(
+        "api/payment/<int:order_id>/",
+        PaymentByOrderView.as_view(),
+        name="payment-by-order",
+    ),
 ]

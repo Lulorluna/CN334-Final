@@ -27,5 +27,6 @@ export default function Login() {
                     <button className="p-2 bg-green-400 rounded-xl my-2" type="submit">Login</button>
                 </form>
             </div>
-        </main>);
+        </main>
+    );
 }
