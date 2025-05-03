@@ -12,7 +12,7 @@ class UserOrderListView(APIView):
 
     def get(self, request):
         orders = Order.objects.filter(customer=request.user)
-        serializer = OrderSerializer(orders, many=True)
+        serializer = OrderHistorySerializer(orders, many=True)
         return Response({"orders": serializer.data})
 
 
@@ -96,16 +96,16 @@ class RemoveFromCartView(APIView):
 class ConfirmOrderView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def post(self, request, order_id):
+    def post(self, request):
         order = Order.objects.filter(
-            id=order_id, customer=request.user, status=Order.STATUS_CART
+            customer=request.user, status=Order.STATUS_CART
         ).first()
+
         if not order:
             return Response({"error": "Order not found or not in cart"}, status=404)
 
         order.status = Order.STATUS_PENDING
         order.save()
-
         product_orders = ProductOrder.objects.filter(order=order)
         for product_order in product_orders:
             product = product_order.product

@@ -28,7 +28,7 @@ urlpatterns = [
         ProductDetailView.as_view(),
         name="product-detail",
     ),
-    path("api/orders/", UserOrderListView.as_view(), name="user-orders"),
+    path("api/history/", UserOrderListView.as_view(), name="user-orders"),
     path("api/orders/cart/", CartOrderView.as_view(), name="cart-orders"),
     path(
         "api/orders/products/",

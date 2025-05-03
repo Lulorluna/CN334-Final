@@ -40,6 +40,19 @@ class OrderSerializer(serializers.ModelSerializer):
         ]
 
 
+class OrderHistorySerializer(serializers.ModelSerializer):
+    items = ProductOrderSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Order
+        fields = [
+            "id",
+            "total_price",
+            "status",
+            "items",
+        ]
+
+
 class ShippingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Shipping

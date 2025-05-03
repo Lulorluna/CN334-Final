@@ -73,9 +73,13 @@ class Payment(models.Model):
     order = models.OneToOneField(
         Order, related_name="payment", on_delete=models.CASCADE
     )
-    user_payment_method_id = models.IntegerField(null=True)
     paid_at = models.DateTimeField(auto_now_add=True)
     amount = models.FloatField()
+
+    def save(self, *args, **kwargs):
+        shipping_fee = self.order.shipping.fee if self.order.shipping else 0
+        self.amount = float(self.order.total_price) + float(shipping_fee)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Payment of customer{self.order.customer_id}: order{self.order.pk}"
