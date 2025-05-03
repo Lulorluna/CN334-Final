@@ -2,12 +2,19 @@ from django.db import models
 
 
 # Create your models here.
+class Category(models.Model):
+    name = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.name
+
+
 class Product(models.Model):
     name = models.CharField(max_length=50)
     detail = models.CharField(max_length=500)
     price = models.FloatField()
     stock = models.IntegerField()
-    category = models.CharField(max_length=255)
+    categories = models.ManyToManyField(Category, related_name="products")
     production_date = models.DateField()
     expiration_date = models.DateField()
     address = models.CharField(max_length=50, blank=True)

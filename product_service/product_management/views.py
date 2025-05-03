@@ -12,7 +12,7 @@ class ProductListView(APIView):
     def get(self, request, format=None):
         products = Product.objects.all()
         serializer = ProductSerializer(products, many=True)
-        return Response({"data": serializer.data}, status=status.HTTP_200_OK)
+        return Response({"data": serializer.data}, status=200)
 
 
 class ProductDetailView(APIView):

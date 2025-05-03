@@ -30,10 +30,17 @@ class CartOrderView(APIView):
 class ProductsInUserOrdersView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
-        orders = Order.objects.filter(customer=request.user)
-        product_orders = ProductOrder.objects.filter(order__in=orders)
+    def get(self, request, order_id):
+        try:
+            order = Order.objects.get(id=order_id, customer=request.user)
+        except Order.DoesNotExist:
+            return Response(
+                {"error": "Order not found or not belongs to the user"}, status=404
+            )
+
+        product_orders = ProductOrder.objects.filter(order=order)
         products = [po.product for po in product_orders]
+
         serializer = ProductSerializer(products, many=True)
         return Response({"products": serializer.data})
 
