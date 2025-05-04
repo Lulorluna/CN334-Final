@@ -35,7 +35,6 @@ export default function ProductListPage() {
     const [products, setProducts] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState(initialCategory || null);
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedProduct, setSelectedProduct] = useState(null);
 
     const categories = [
         { label: 'Raw', icon: '/icons/raw.png' },
@@ -66,11 +65,6 @@ export default function ProductListPage() {
         }
     }, [searchParams]);
 
-    const handleSelectProduct = (productId) => {
-        const product = products.find(p => String(p.id) === productId);
-        setSelectedProduct(product);
-    };
-
     const filteredProducts = products.filter(item => {
         const matchesCategory = selectedCategory ? item.categories.includes(selectedCategory) : true;
         const term = searchTerm.toLowerCase();
@@ -83,6 +77,7 @@ export default function ProductListPage() {
         <div className="min-h-screen flex flex-col bg-cover bg-no-repeat" style={{ backgroundImage: "url('/images/bg.png')" }}>
             <header className="fixed top-0 w-full bg-[#fdf6e3] shadow-md z-50">
                 <div className="container mx-auto flex items-center justify-between p-4">
+
                     <div className="flex items-center gap-8">
                         <Link href="/" className="flex items-center gap-2 group">
                             <Image src="/images/logo.png" width={40} height={40} alt="Logo" />
@@ -91,6 +86,7 @@ export default function ProductListPage() {
                                 <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-yellow-500 group-hover:w-full transition-all duration-300" />
                             </span>
                         </Link>
+
                         <nav className="flex gap-6">
                             {['Home', 'About Us', 'Product'].map((text, idx) => {
                                 const href = text === 'Home' ? '/' : text === 'About Us' ? '/about' : '/product-list';
@@ -105,20 +101,27 @@ export default function ProductListPage() {
                             })}
                         </nav>
                     </div>
+
                     <div className="flex gap-4 items-center">
-                        <Link href="/order" className="relative p-2 border rounded-full hover:bg-gray-100 transition-colors duration-200 ease-in-out">🛒</Link>
+                        <Link href="/order" className="relative p-2 border rounded-full hover:bg-gray-100 transition-colors duration-200 ease-in-out">
+                            🛒
+                        </Link>
                         {isLoggedIn ? (
                             <Link href="/profile" className="w-10 h-10 rounded-full overflow-hidden border hover:ring-2 ring-yellow-500 transition-all duration-200">
                                 <Image src="/images/user-profile.jpg" alt="Profile" width={40} height={40} />
                             </Link>
                         ) : (
-                            <Link href="/login" className="bg-yellow-400 hover:bg-yellow-500 text-white font-bold px-4 py-2 rounded-full transition-colors duration-200">Sign In</Link>
+                            <Link href="/login" className="bg-yellow-400 hover:bg-yellow-500 transition-colors duration-200 ease-in-out text-white font-bold px-4 py-2 rounded-full">
+                                Sign In
+                            </Link>
                         )}
                     </div>
                 </div>
             </header>
             <div className="h-20" />
+            {/* Main Content */}
             <main className="container mx-auto px-4 py-8 flex flex-col md:flex-row gap-6 flex-grow">
+                {/* Sidebar */}
                 <aside className="md:w-1/4 w-full bg-white rounded-xl shadow p-4">
                     <h2 className="text-lg font-bold text-gray-700 mb-4">ค้นหา / หมวดหมู่</h2>
                     <input type="text" placeholder="ค้นหาสินค้า..." className="w-full mb-4 border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-300" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
@@ -131,11 +134,12 @@ export default function ProductListPage() {
                         {selectedCategory && <button onClick={() => setSelectedCategory(null)} className="mt-3 text-red-600 text-sm hover:underline">ล้างการเลือก</button>}
                     </div>
                 </aside>
+                {/* Product Grid */}
                 <section className="md:w-3/4 w-full">
                     {filteredProducts.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                             {filteredProducts.map(item => (
-                                <div key={item.id} className="bg-white rounded-xl shadow hover:shadow-lg transition p-4 cursor-pointer flex flex-col justify-between" onClick={() => handleSelectProduct(String(item.id))}>
+                                <div key={item.id} className="bg-white rounded-xl shadow hover:shadow-lg transition p-4 flex flex-col justify-between">
                                     <div className="flex justify-center items-center h-32">
                                         <Image src={item.image || '/images/placeholder.png'} alt={item.name} width={100} height={100} className="object-contain" />
                                     </div>
@@ -145,7 +149,12 @@ export default function ProductListPage() {
                                     </div>
                                     <p className="text-sm text-gray-600 mt-1">{item.detail}</p>
                                     <p className="font-bold text-yellow-500 mt-2">฿ {item.price.toLocaleString()}</p>
-                                    <button className="mt-4 bg-green-500 hover:bg-green-600 text-white font-bold py-2 rounded-full">เลือกซื้อ</button>
+                                    <Link
+                                        href={`/product-detail?product=${item.id}`}
+                                        className="mt-4 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-full text-center"
+                                    >
+                                        เลือกซื้อสินค้า
+                                    </Link>
                                 </div>
                             ))}
                         </div>
@@ -154,13 +163,22 @@ export default function ProductListPage() {
                     )}
                 </section>
             </main>
-            {selectedProduct && <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />}
             <footer className="bg-gray-100 py-6">
-                <div className="flex justify-center gap-2 mb-4">{[1, 2, 3, 4].map((_, idx) => <span key={idx} className="w-4 h-4 bg-gray-400 rounded-full inline-block" />)}</div>
+                <div className="flex justify-center gap-2 mb-4">
+                    {[1, 2, 3, 4].map((_, idx) => (
+                        <span key={idx} className="w-4 h-4 bg-gray-400 rounded-full inline-block" />
+                    ))}
+                </div>
                 <div className="container mx-auto px-4 flex flex-col sm:flex-row justify-between items-center text-gray-600">
                     <span>About us</span>
-                    <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="relative text-gray-600 font-medium group mt-2 sm:mt-0">
-                        <span className="relative inline-block px-1">Back to top ↑<span className="absolute bottom-0 left-0 h-[2px] w-0 bg-gray-500 group-hover:w-full transition-all duration-300" /></span>
+                    <button
+                        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                        className="relative text-gray-600 font-medium group mt-2 sm:mt-0"
+                    >
+                        <span className="relative inline-block px-1">
+                            Back to top ↑
+                            <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-gray-500 group-hover:w-full transition-all duration-300" />
+                        </span>
                     </button>
                 </div>
             </footer>
