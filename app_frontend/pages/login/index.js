@@ -65,8 +65,14 @@ export default function LoginPage() {
     }
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-yellow-50 to-yellow-200 p-4">
-            <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-6 space-y-6">
+
+        <div className="login-page">
+            <div className="slideshow-container">
+                <div className="slide bg1"></div>
+                <div className="slide bg2"></div>
+                <div className="slide bg3"></div>
+            </div>
+            <div className="w-full max-w-xl bg-white rounded-2xl shadow-xl p-8 space-y-6">
                 <div className="flex flex-col items-center">
                     <Image src="/images/logo.png" width={72} height={72} alt="Logo" />
                     <h2 className="mt-4 text-3xl font-extrabold text-gray-900">Welcome Back</h2>
@@ -113,4 +119,6 @@ export default function LoginPage() {
         </div>
     );
 }
+
+
 
