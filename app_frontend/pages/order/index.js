@@ -1,7 +1,9 @@
-import Image from 'next/image';
-import Link from 'next/link';
+'use client';
+
 import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import Image from 'next/image';
 
 function isTokenExpired(token) {
     try {
@@ -29,48 +31,97 @@ export default function OrderSummaryPage() {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
 
     useEffect(() => {
-        function checkAuth() {
-            const token = localStorage.getItem('jwt_access');
-            if (token && !isTokenExpired(token)) setIsLoggedIn(true);
-            else { localStorage.removeItem('jwt_access'); setIsLoggedIn(false); }
-        }
-        checkAuth();
-        const iv = setInterval(checkAuth, 60000);
-        return () => clearInterval(iv);
+        const stored = JSON.parse(localStorage.getItem('cart') || '[]');
+        setCart(stored);
     }, []);
 
     useEffect(() => {
-        const adding = sessionStorage.getItem('addingProduct');
-        let existing = JSON.parse(localStorage.getItem('cart') || '[]');
-        if (productId && adding === 'true' && !hasAdded) {
-            const idx = existing.findIndex(i => i.id === Number(productId));
-            if (idx >= 0) existing[idx].quantity += quantity;
-            else existing.push({ id: Number(productId), quantity });
-            sessionStorage.removeItem('addingProduct');
-            localStorage.setItem('cart', JSON.stringify(existing));
+        if (productId && !hasAdded) {
+            const idNum = Number(productId);
+            setCart(prev => {
+                const idx = prev.findIndex(i => i.id === idNum);
+                let updated = [...prev];
+                if (idx >= 0) updated[idx].quantity += quantity;
+                else updated.push({ id: idNum, quantity });
+                localStorage.setItem('cart', JSON.stringify(updated));
+                return updated;
+            });
             setHasAdded(true);
         }
-        setCart(existing);
     }, [productId, quantity, hasAdded]);
 
     useEffect(() => {
-        async function loadProducts() {
-            if (!cart.length) return;
+        const checkAuth = () => {
+            const token = localStorage.getItem('jwt_access');
+            const valid = !!token && !isTokenExpired(token);
+            setIsLoggedIn(valid);
+
+            if (!valid && router.pathname !== '/login') {
+                localStorage.removeItem('jwt_access');
+                router.push('/login');
+            }
+        };
+
+        checkAuth();
+        const id = setInterval(checkAuth, 60000);
+
+        return () => clearInterval(id);
+    }, [router]);
+
+
+    useEffect(() => {
+        if (!isLoggedIn) return;
+        (async () => {
             try {
-                const res = await fetch(`/api/products/bulk/?ids=${cart.map(i => i.id).join(',')}`);
-                const data = await res.json();
-                const enriched = cart.map(i => {
-                    const p = data.find(d => d.id === i.id);
-                    return p ? { ...p, quantity: i.quantity } : null;
-                }).filter(Boolean);
+                const token = localStorage.getItem('jwt_access');
+                const res = await fetch('http://127.0.0.1:3341/api/cart/', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const { cart_orders } = await res.json();
+                const formatted = cart_orders.flatMap(o =>
+                    o.items.map(i => ({ id: i.product, quantity: i.quantity }))
+                );
+                setCart(formatted);
+                localStorage.setItem('cart', JSON.stringify(formatted));
+            } catch (e) {
+                console.error(e);
+            }
+        })();
+    }, [isLoggedIn]);
+
+
+    useEffect(() => {
+        if (!cart.length) return setFullProducts([]);
+        (async () => {
+            try {
+                const details = await Promise.all(
+                    cart.map(({ id }) =>
+                        fetch(`http://127.0.0.1:3341/api/product/${id}/`)
+                            .then(r => r.json())
+                            .then(json => {
+                                console.log(`Product ${id}:`, json);
+                                return json;
+                            })
+                    )
+                );
+                console.log(details)
+                const enriched = details.map((p, i) => ({
+                    id: p.data.id,
+                    name: p.data.name || '—',
+                    image: p.data.image || '/images/placeholder.png',
+                    price: Number(p.data.price) || 0,
+                    quantity: cart[i].quantity,
+                }));
+
                 setFullProducts(enriched);
-            } catch (e) { console.error(e); }
-        }
-        loadProducts();
+            } catch (e) {
+                console.error(e);
+            }
+        })();
     }, [cart]);
 
     useEffect(() => {
-        async function loadUserData() {
+        (async () => {
             try {
                 const token = localStorage.getItem('jwt_access');
                 const headers = { Authorization: `Bearer ${token}` };
@@ -85,9 +136,10 @@ export default function OrderSummaryPage() {
                 const sl = Array.isArray(sj) ? sj : sj.data || [];
                 setShippings(sl);
                 if (sl.length) setSelectedShippingId(sl[0].id);
-            } catch (e) { console.error(e); }
-        }
-        loadUserData();
+            } catch (e) {
+                console.error(e);
+            }
+        })();
     }, []);
 
     const updateQty = (id, qty) => {
@@ -98,136 +150,115 @@ export default function OrderSummaryPage() {
         localStorage.setItem('cart', JSON.stringify(updated));
     };
 
-    const subtotal = fullProducts.reduce((s, p) => s + p.price * p.quantity, 0);
-    const selShip = shippings.find(s => s.id === Number(selectedShippingId));
-    const shippingFee = selShip?.fee || 0;
+    const subtotal = fullProducts.reduce((sum, p) => sum + p.price * p.quantity, 0);
+    const shipFee = shippings.find(s => s.id === Number(selectedShippingId))?.fee || 0;
 
     const handleConfirm = () => {
-        alert('ยืนยันคำสั่งซื้อเรียบร้อยแล้ว');
-        localStorage.removeItem('cart'); setCart([]);
+        alert('ยืนยันเรียบร้อย');
+        localStorage.removeItem('cart');
+        setCart([]);
         router.push('/');
     };
 
     return (
-        <div className="min-h-screen flex flex-col bg-cover bg-no-repeat" style={{ backgroundImage: 'url("/images/background.jpg")' }}>
-            {/* Header/Nav */}
+        <div className="flex flex-col min-h-screen bg-cover" style={{ backgroundImage: "url('/images/bg.png')" }}>
+            {/* Navbar */}
             <header className="fixed top-0 w-full bg-[#fdf6e3] shadow-md z-50">
                 <div className="container mx-auto flex items-center justify-between p-4">
-                    <div className="flex items-center gap-8">
-                        <Link href="/" className="flex items-center gap-2 group">
-                            <Image src="/images/logo.png" width={40} height={40} alt="Logo" />
-                            <span className="relative text-xl font-bold text-gray-800 px-1">
-                                Meal of Hope
-                                <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-yellow-500 group-hover:w-full transition-all duration-300" />
-                            </span>
-                        </Link>
-                        <nav className="flex gap-6">
-                            {['Home', 'About Us', 'Product'].map((t, i) => (
-                                <Link key={i} href={t === 'Home' ? '/' : t === 'About Us' ? '/about' : '/product-list'} className="relative text-gray-800 font-semibold group">
-                                    <span className="relative inline-block px-1">
-                                        {t}
-                                        <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-yellow-500 group-hover:w-full transition-all duration-300" />
-                                    </span>
-                                </Link>
-                            ))}
-                        </nav>
-                    </div>
-                    <div className="flex gap-4 items-center">
-                        <Link href="/order" className="relative p-2 border rounded-full hover:bg-gray-100 transition-colors duration-200 ease-in-out">🛒</Link>
-                        {isLoggedIn
-                            ? <Link href="/profile" className="w-10 h-10 rounded-full overflow-hidden border hover:ring-2 ring-yellow-500 transition-all duration-200">
+                    <Link href="/" className="flex items-center gap-2">
+                        <Image src="/images/logo.png" width={40} height={40} alt="Logo" />
+                        <span className="font-bold text-gray-800">Meal of Hope</span>
+                    </Link>
+                    <nav className="flex gap-6">
+                        {['Home', 'About Us', 'Product'].map((t, i) => (
+                            <Link key={i} href={t === 'Home' ? '/' : t === 'About Us' ? '/about' : '/product-list'} className="text-gray-800 font-semibold hover:text-yellow-500 transition">{t}</Link>
+                        ))}
+                    </nav>
+                    <div className="flex gap-4">
+                        <Link href="/order" className="p-2 border rounded-full hover:bg-gray-100">🛒</Link>
+                        {isLoggedIn ? (
+                            <Link href="/profile" className="w-10 h-10 rounded-full overflow-hidden border hover:ring-2 ring-yellow-500 transition-all duration-200">
                                 <Image src="/images/user-profile.jpg" alt="Profile" width={40} height={40} />
                             </Link>
-                            : <Link href="/login" className="bg-yellow-400 hover:bg-yellow-500 text-white font-bold px-4 py-2 rounded-full transition-colors duration-200">Sign In</Link>
-                        }
+                        ) : (
+                            <Link href="/login" className="bg-yellow-400 hover:bg-yellow-500 transition-colors duration-200 ease-in-out text-white font-bold px-4 py-2 rounded-full">
+                                Sign In
+                            </Link>
+                        )}
                     </div>
                 </div>
             </header>
 
-            {/* Main Content */}
-            <div className="mt-24 flex-grow container mx-auto px-4 py-8">
-                <div className="bg-white bg-opacity-90 rounded-lg shadow-lg p-6 flex flex-col md:flex-row gap-6">
-                    {/* Left Column: Cart Items */}
-                    <div className="md:w-2/3 space-y-4">
-                        {fullProducts.length === 0 ? (
-                            <div className="text-yellow-600 font-semibold">ไม่มีสินค้าในตะกร้า</div>
-                        ) : (
-                            fullProducts.map(item => (
-                                <div key={item.id} className="flex justify-between items-center border-b py-4">
-                                    <div className="flex items-center gap-4">
-                                        <Image src={item.image} width={60} height={60} alt={item.name} />
-                                        <div>
-                                            <h3 className="font-bold text-gray-800">{item.name}</h3>
-                                            <p className="text-sm text-gray-600">฿{item.price.toLocaleString()}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <button className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300" onClick={() => updateQty(item.id, item.quantity - 1)}>-</button>
-                                        <span>{item.quantity}</span>
-                                        <button className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300" onClick={() => updateQty(item.id, item.quantity + 1)}>+</button>
-                                    </div>
-                                    <button onClick={() => updateQty(item.id, 0)} className="px-3 py-1 border border-red-500 text-red-500 rounded hover:bg-red-50">Cancel</button>
-                                </div>
-                            ))
-                        )}
+            <main className="flex-grow container mx-auto p-4 mt-20 grid grid-cols-1 lg:grid-cols-3 gap-8 bg-white/90 rounded-lg shadow">
 
-                        {fullProducts.length > 0 && (
-                            <div className="mt-6 bg-white p-4 rounded shadow">
-                                <h4 className="font-bold mb-2">Payment Information:</h4>
-                                <p>รวมการสั่งซื้อ: ฿{subtotal.toLocaleString()}</p>
-                                <p>ค่าจัดส่ง: ฿{shippingFee.toLocaleString()}</p>
-                                <p className="font-bold">ยอดชำระทั้งหมด: ฿{(subtotal + shippingFee).toLocaleString()}</p>
-                                <div className="mt-2">
-                                    <label className="inline-flex items-center">
-                                        <input type="checkbox" className="form-checkbox text-yellow-500" />
-                                        <span className="ml-2 text-sm text-gray-700">ยอมรับเงื่อนไขการให้บริการ</span>
-                                    </label>
+                <div className="lg:col-span-2">
+                    {fullProducts.length === 0 ? (
+                        <div className="text-center text-red-500 py-10">ไม่มีสินค้าในตะกร้า</div>
+                    ) : (
+                        fullProducts.map(item => (
+                            <div key={item.id} className="flex items-center justify-between p-4 mb-4 border rounded bg-white shadow-sm hover:shadow-md transition">
+                                <div className="flex items-center gap-4">
+                                    <Image src={item.image} width={60} height={60} alt={item.name} className="rounded" />
+                                    <div>
+                                        <h2 className="font-bold text-lg hover:text-yellow-600 transition">{item.name}</h2>
+                                        <p className="text-gray-600">฿{item.price.toLocaleString()}</p>
+                                        {console.log(item.name)}
+                                    </div>
                                 </div>
-                                <button onClick={handleConfirm} className="mt-4 w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded font-bold">Confirm</button>
+                                <div className="flex items-center gap-2">
+                                    <button onClick={() => updateQty(item.id, item.quantity - 1)} disabled={item.quantity <= 1} className="w-8 h-8 flex items-center justify-center bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50">−</button>
+                                    <span className="font-medium">{item.quantity}</span>
+                                    <button onClick={() => updateQty(item.id, item.quantity + 1)} className="w-8 h-8 flex items-center justify-center bg-gray-200 rounded hover:bg-gray-300">+</button>
+                                    <button onClick={() => updateQty(item.id, 0)} className="ml-4 text-red-500 hover:text-red-700">✕</button>
+                                </div>
                             </div>
-                        )}
-                    </div>
+                        ))
+                    )}
 
-                    <div className="md:w-1/3 bg-white bg-opacity-95 p-4 rounded shadow space-y-4">
-                        <div>
-                            <label htmlFor="address" className="font-semibold">Address</label>
-                            <select id="address" className="w-full border rounded p-2 mt-1 h-24">
-                                {(addresses || []).map(addr => (
-                                    <option key={addr.id} value={addr.id}>{addr.receiver_name} — {addr.district}, {addr.province}</option>
-                                ))}
-                            </select>
+                    {fullProducts.length > 0 && (
+                        <div className="bg-white p-6 rounded shadow mt-6">
+                            <h3 className="font-bold text-xl mb-4">สรุปคำสั่งซื้อ</h3>
+                            <div className="flex justify-between mb-2"><span>รวมสินค้า</span><span>฿{subtotal.toLocaleString()}</span></div>
+                            <div className="flex justify-between mb-4"><span>ค่าจัดส่ง</span><span>฿{shipFee.toLocaleString()}</span></div>
+                            <div className="flex justify-between font-bold text-lg mb-4"><span>ยอดรวมทั้งหมด</span><span>฿{(subtotal + shipFee).toLocaleString()}</span></div>
+                            <label className="flex items-center gap-2"><input type="checkbox" className="text-yellow-500" />ยอมรับเงื่อนไข</label>
+                            <button onClick={handleConfirm} className="mt-6 w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-lg font-bold transition">ยืนยันการสั่งซื้อ</button>
                         </div>
-                        <div>
-                            <label htmlFor="shipping" className="font-semibold">Shipping</label>
-                            <select id="shipping" className="w-full border rounded p-2 mt-1 h-12" onChange={e => setSelectedShippingId(Number(e.target.value))} value={selectedShippingId || ''}>
-                                {(shippings || []).map(ship => (
-                                    <option key={ship.id} value={ship.id}>{ship.method} - ฿{ship.fee}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label htmlFor="payment" className="font-semibold">Payment</label>
-                            <select id="payment" className="w-full border rounded p-2 mt-1 h-12">
-                                {(payments || []).map(pay => (
-                                    <option key={pay.id} value={pay.id}>**** **** **** {pay.card_no.slice(-4)}</option>
-                                ))}
-                            </select>
-                        </div>
+                    )}
+                </div>
+
+
+                <div className="bg-white p-6 rounded shadow">
+                    <h3 className="font-bold text-lg mb-4">ข้อมูลการจัดส่ง</h3>
+                    <div className="mb-4">
+                        <label className="block font-medium mb-1">ที่อยู่</label>
+                        <select id="address" className="w-full border rounded p-2 mt-1 h-24">
+                            {addresses.map(addr => (
+                                <option key={addr.id} value={addr.id}>{addr.receiver_name} — {addr.district}, {addr.province}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="mb-4">
+                        <label className="block font-medium mb-1">วิธีจัดส่ง</label>
+                        <select className="w-full border rounded px-3 py-2" value={selectedShippingId || ''} onChange={e => setSelectedShippingId(Number(e.target.value))}>
+                            {shippings.map(s => <option key={s.id} value={s.id}>{s.method} — ฿{s.fee}</option>)}
+                        </select>
+                    </div>
+                    <div className="mb-4">
+                        <label className="block font-medium mb-1">วิธีชำระเงิน</label>
+                        <select className="w-full border rounded px-3 py-2">
+                            {payments.map(p => <option key={p.id} value={p.id}>**** **** **** {p.card_no.slice(-4)}</option>)}
+                        </select>
                     </div>
                 </div>
-            </div>
-
-            <footer className="bg-gray-100 py-6">
+            </main>
+            <footer className="bg-gray-100 py-6 text-center mt-auto">
                 <div className="flex justify-center gap-2 mb-4">
-                    {Array(4).fill().map((_, idx) => (
-                        <span key={idx} className="w-4 h-4 bg-gray-400 rounded-full inline-block" />
-                    ))}
+                    {[...Array(4)].map((_, i) => <span key={i} className="w-4 h-4 bg-gray-400 rounded-full inline-block" />)}
                 </div>
-                <div className="container mx-auto px-4 flex flex-col sm:flex-row justify-between items-center text-gray-600">
+                <div className="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-center text-gray-600 px-4">
                     <span>About us</span>
-                    <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="relative text-gray-600 font-medium group mt-2 sm:mt-0">
-                        <span className="relative inline-block px-1">Back to top ↑<span className="absolute bottom-0 left-0 h-[2px] w-0 bg-gray-500 group-hover:w-full transition-all duration-300" /></span>
-                    </button>
+                    <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="hover:underline mt-2 sm:mt-0">Back to top ↑</button>
                 </div>
             </footer>
         </div>

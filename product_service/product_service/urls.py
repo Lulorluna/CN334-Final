@@ -29,7 +29,7 @@ urlpatterns = [
         name="product-detail",
     ),
     path("api/history/", UserOrderListView.as_view(), name="user-orders"),
-    path("api/orders/cart/", CartOrderView.as_view(), name="cart-orders"),
+    path("api/cart/", CartOrderView.as_view(), name="cart-orders"),
     path(
         "api/orders/products/<int:order_id>",
         ProductsInUserOrdersView.as_view(),
