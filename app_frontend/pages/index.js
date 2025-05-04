@@ -4,12 +4,31 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
+function isTokenExpired(token) {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return Date.now() >= payload.exp * 1000;
+  } catch {
+    return true;
+  }
+}
+
 export default function HomePage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('jwt_access');
-    setIsLoggedIn(!!token);
+    function checkAuth() {
+      const token = localStorage.getItem('jwt_access');
+      if (token && !isTokenExpired(token)) {
+        setIsLoggedIn(true);
+      } else {
+        localStorage.removeItem('jwt_access');
+        setIsLoggedIn(false);
+      }
+    }
+    checkAuth();
+    const interval = setInterval(checkAuth, 60000);
+    return () => clearInterval(interval);
   }, []);
 
   const categories = [
@@ -30,31 +49,43 @@ export default function HomePage() {
     <div className="flex flex-col">
       <header className="fixed top-0 w-full bg-[#fdf6e3] shadow-md z-50">
         <div className="container mx-auto flex items-center justify-between p-4">
-          <Link href="/" className="flex items-center gap-2">
-            <Image src="/images/logo.png" width={40} height={40} alt="Logo" />
-            <span className="font-bold text-gray-800">Meal of Hope</span>
-          </Link>
-          <nav className="flex gap-6">
-            {['Home', 'About Us', 'Product'].map((text, idx) => {
-              const href = text === 'Home' ? '/' : text === 'About Us' ? '/about' : '/product-list';
-              return (
-                <Link key={idx} href={href} className="relative text-gray-800 font-semibold group">
-                  <span className="relative inline-block px-1">
-                    {text}
-                    <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-yellow-500 group-hover:w-full transition-all duration-300"></span>
-                  </span>
-                </Link>
-              );
-            })}
-          </nav>
+
+          <div className="flex items-center gap-8">
+            <Link href="/" className="flex items-center gap-2 group">
+              <Image src="/images/logo.png" width={40} height={40} alt="Logo" />
+              <span className="relative text-xl font-bold text-gray-800 px-1">
+                Meal of Hope
+                <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-yellow-500 group-hover:w-full transition-all duration-300" />
+              </span>
+            </Link>
+
+            <nav className="flex gap-6">
+              {['Home', 'About Us', 'Product'].map((text, idx) => {
+                const href = text === 'Home' ? '/' : text === 'About Us' ? '/about' : '/product-list';
+                return (
+                  <Link key={idx} href={href} className="relative text-gray-800 font-semibold group">
+                    <span className="relative inline-block px-1">
+                      {text}
+                      <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-yellow-500 group-hover:w-full transition-all duration-300" />
+                    </span>
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+
           <div className="flex gap-4 items-center">
-            <Link href="/order" className="relative p-2 border rounded-full hover:bg-gray-100 transition-colors duration-200 ease-in-out">🛒</Link>
+            <Link href="/order" className="relative p-2 border rounded-full hover:bg-gray-100 transition-colors duration-200 ease-in-out">
+              🛒
+            </Link>
             {isLoggedIn ? (
               <Link href="/profile" className="w-10 h-10 rounded-full overflow-hidden border hover:ring-2 ring-yellow-500 transition-all duration-200">
-                <Image src="/images/logo.png" alt="Profile" width={40} height={40} />
+                <Image src="/images/user-profile.jpg" alt="Profile" width={40} height={40} />
               </Link>
             ) : (
-              <Link href="/login" className="bg-yellow-400 hover:bg-yellow-500 transition-colors duration-200 ease-in-out text-white font-bold px-4 py-2 rounded-full">Sign In</Link>
+              <Link href="/login" className="bg-yellow-400 hover:bg-yellow-500 transition-colors duration-200 ease-in-out text-white font-bold px-4 py-2 rounded-full">
+                Sign In
+              </Link>
             )}
           </div>
         </div>
@@ -114,12 +145,20 @@ export default function HomePage() {
       <footer className="bg-gray-100 py-6">
         <div className="flex justify-center gap-2 mb-4">
           {[1, 2, 3, 4].map((_, idx) => (
-            <span key={idx} className="w-4 h-4 bg-gray-400 rounded-full inline-block"></span>
+            <span key={idx} className="w-4 h-4 bg-gray-400 rounded-full inline-block" />
           ))}
         </div>
         <div className="container mx-auto px-4 flex flex-col sm:flex-row justify-between items-center text-gray-600">
           <span>About us</span>
-          <a href="#" className="hover:underline mt-2 sm:mt-0">Back to top ↑</a>
+          <button
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="relative text-gray-600 font-medium group mt-2 sm:mt-0"
+          >
+            <span className="relative inline-block px-1">
+              Back to top ↑
+              <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-yellow-500 group-hover:w-full transition-all duration-300" />
+            </span>
+          </button>
         </div>
       </footer>
     </div>
