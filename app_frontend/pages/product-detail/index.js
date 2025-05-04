@@ -55,11 +55,29 @@ export default function ProductDetailPage() {
         fetchProduct();
     }, [id]);
 
-    const handleConfirm = () => {
+    const handleConfirm = async () => {
         if (!isLoggedIn) {
             router.push('/login');
         } else if (product?.available && product.stock > 0) {
-            router.push(`/order?product=${product.id}&quantity=${quantity}`);
+            try {
+                const token = localStorage.getItem('jwt_access');
+                await axios.post(
+                    'http://127.0.0.1:3341/api/cart/add/',
+                    {
+                        product_id: product.id,
+                        quantity: quantity,
+                    },
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                        },
+                    }
+                );
+                alert('เพิ่มสินค้าลงตะกร้าเรียบร้อยแล้ว');
+            } catch (err) {
+                alert('ไม่สามารถเพิ่มสินค้าได้');
+                console.error(err);
+            }
         }
     };
 
@@ -70,43 +88,31 @@ export default function ProductDetailPage() {
         <div className="flex flex-col min-h-screen bg-cover bg-center" style={{ backgroundImage: "url('/images/bg.png')" }}>
             <header className="fixed top-0 w-full bg-[#fdf6e3] shadow-md z-50">
                 <div className="container mx-auto flex items-center justify-between p-4">
-
-                    <div className="flex items-center gap-8">
-                        <Link href="/" className="flex items-center gap-2 group">
-                            <Image src="/images/logo.png" width={40} height={40} alt="Logo" />
-                            <span className="relative text-xl font-bold text-gray-800 px-1">
-                                Meal of Hope
-                                <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-yellow-500 group-hover:w-full transition-all duration-300" />
-                            </span>
-                        </Link>
-
-                        <nav className="flex gap-6">
-                            {['Home', 'About Us', 'Product'].map((text, idx) => {
-                                const href = text === 'Home' ? '/' : text === 'About Us' ? '/about' : '/product-list';
-                                return (
-                                    <Link key={idx} href={href} className="relative text-gray-800 font-semibold group">
-                                        <span className="relative inline-block px-1">
-                                            {text}
-                                            <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-yellow-500 group-hover:w-full transition-all duration-300" />
-                                        </span>
-                                    </Link>
-                                );
-                            })}
-                        </nav>
-                    </div>
-
-                    <div className="flex gap-4 items-center">
-                        <Link href="/order" className="relative p-2 border rounded-full hover:bg-gray-100 transition-colors duration-200 ease-in-out">
-                            🛒
-                        </Link>
+                    <Link href="/" className="flex items-center gap-2">
+                        <Image src="/images/logo.png" width={40} height={40} alt="Logo" />
+                        <span className="font-bold text-gray-800">Meal of Hope</span>
+                    </Link>
+                    <nav className="flex gap-6">
+                        {['Home', 'About Us', 'Product'].map((text, idx) => {
+                            const href = text === 'Home' ? '/' : text === 'About Us' ? '/about' : '/product-list';
+                            return (
+                                <Link key={idx} href={href} className="relative text-gray-800 font-semibold group">
+                                    <span className="relative inline-block px-1">
+                                        {text}
+                                        <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-yellow-500 group-hover:w-full transition-all duration-300" />
+                                    </span>
+                                </Link>
+                            );
+                        })}
+                    </nav>
+                    <div className="flex gap-4">
+                        <Link href="/order" className="relative p-2 border rounded-full hover:bg-gray-100 transition-colors duration-200 ease-in-out">🛒</Link>
                         {isLoggedIn ? (
                             <Link href="/profile" className="w-10 h-10 rounded-full overflow-hidden border hover:ring-2 ring-yellow-500 transition-all duration-200">
                                 <Image src="/images/user-profile.jpg" alt="Profile" width={40} height={40} />
                             </Link>
                         ) : (
-                            <Link href="/login" className="bg-yellow-400 hover:bg-yellow-500 transition-colors duration-200 ease-in-out text-white font-bold px-4 py-2 rounded-full">
-                                Sign In
-                            </Link>
+                            <Link href="/login" className="bg-yellow-400 hover:bg-yellow-500 transition-colors duration-200 text-white font-bold px-4 py-2 rounded-full">Sign In</Link>
                         )}
                     </div>
                 </div>
@@ -158,22 +164,17 @@ export default function ProductDetailPage() {
                 </div>
             </main>
 
-            <footer className="bg-gray-100 py-6">
-                <div className="flex justify-center gap-2 mb-4">
-                    {[1, 2, 3, 4].map((_, idx) => (
-                        <span key={idx} className="w-4 h-4 bg-gray-400 rounded-full inline-block" />
+            <footer className="bg-gray-100 mt-10 py-6 text-center text-sm text-gray-600">
+                <div className="flex justify-center space-x-2 mb-3">
+                    {[1, 2, 3, 4].map(i => (
+                        <span key={i} className="w-4 h-4 bg-gray-400 rounded-full inline-block" />
                     ))}
                 </div>
-                <div className="container mx-auto px-4 flex flex-col sm:flex-row justify-between items-center text-gray-600">
+                <div className="flex flex-col sm:flex-row justify-center items-center space-y-2 sm:space-y-0 sm:space-x-6">
                     <span>About us</span>
-                    <button
-                        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                        className="relative text-gray-600 font-medium group mt-2 sm:mt-0"
-                    >
-                        <span className="relative inline-block px-1">
-                            Back to top ↑
-                            <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-gray-500 group-hover:w-full transition-all duration-300" />
-                        </span>
+                    <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="hover:underline relative inline-block px-1 group">
+                        Back to top ↑
+                        <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-gray-500 group-hover:w-full transition-all duration-300" />
                     </button>
                 </div>
             </footer>

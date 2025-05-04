@@ -188,7 +188,6 @@ export default function OrderSummaryPage() {
                         )}
                     </div>
 
-                    {/* Right Column: Forms */}
                     <div className="md:w-1/3 bg-white bg-opacity-95 p-4 rounded shadow space-y-4">
                         <div>
                             <label htmlFor="address" className="font-semibold">Address</label>
@@ -218,7 +217,6 @@ export default function OrderSummaryPage() {
                 </div>
             </div>
 
-            {/* Footer */}
             <footer className="bg-gray-100 py-6">
                 <div className="flex justify-center gap-2 mb-4">
                     {Array(4).fill().map((_, idx) => (
