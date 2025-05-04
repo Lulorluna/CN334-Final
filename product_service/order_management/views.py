@@ -45,6 +45,20 @@ class ProductsInUserOrdersView(APIView):
         return Response({"products": serializer.data})
 
 
+class OrderDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, id, format=None):
+        # หาเฉพาะ order ของ user ที่ตรงกับ id
+        try:
+            order = Order.objects.get(pk=id, customer=request.user)
+        except Order.DoesNotExist:
+            return Response({"detail": "Order not found"}, status=404)
+
+        serializer = OrderDetailSerializer(order)
+        return Response(serializer.data, status=200)
+
+
 class AddToCartView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -104,21 +118,18 @@ class UpdateCartItemView(APIView):
     permission_classes = [IsAuthenticated]
 
     def patch(self, request, product_id):
-        # หา Order (cart) ของผู้ใช้
         order = Order.objects.filter(
             customer=request.user, status=Order.STATUS_CART
         ).first()
         if not order:
             return Response({"error": "Cart not found"}, status=404)
 
-        # หา ProductOrder
         prod_order = ProductOrder.objects.filter(
             order=order, product_id=product_id
         ).first()
         if not prod_order:
             return Response({"error": "Product not in cart"}, status=404)
 
-        # อ่าน quantity ใหม่จาก request body
         new_qty = request.data.get("quantity")
         try:
             new_qty = int(new_qty)
@@ -126,11 +137,9 @@ class UpdateCartItemView(APIView):
             return Response({"error": "Invalid quantity"}, status=404)
 
         if new_qty < 1:
-            # ถ้าต้องการลบเมื่อ qty < 1 ก็ลบแล้ว return
             prod_order.delete()
             return Response({"message": "Product removed from cart"}, status=200)
 
-        # อัปเดตจำนวนสินค้า (ตรวจ stock ถ้าต้องการ)
         product = get_object_or_404(Product, pk=product_id)
         if product.stock < new_qty:
             return Response(
@@ -141,7 +150,6 @@ class UpdateCartItemView(APIView):
         prod_order.quantity = new_qty
         prod_order.save()
 
-        # ตอบกลับด้วย serializer เดิม
         serializer = ProductOrderSerializer(prod_order)
         return Response({"message": "Quantity updated", "data": serializer.data})
 

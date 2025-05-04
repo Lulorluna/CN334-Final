@@ -28,6 +28,7 @@ urlpatterns = [
         ProductDetailView.as_view(),
         name="product-detail",
     ),
+    path("api/order/<int:id>/", OrderDetailView.as_view(), name="order-detail"),
     path("api/history/", UserOrderListView.as_view(), name="user-orders"),
     path("api/cart/", CartOrderView.as_view(), name="cart-orders"),
     path(

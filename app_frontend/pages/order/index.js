@@ -211,7 +211,7 @@ export default function OrderSummaryPage() {
             alert('ยืนยันเรียบร้อย');
             localStorage.removeItem('cart');
             setCart([]);
-            router.push('/');
+            router.push('/summarize');
         } catch (err) {
             console.error(err);
             alert('ยืนยันคำสั่งซื้อไม่สำเร็จ: ' + err.message);
