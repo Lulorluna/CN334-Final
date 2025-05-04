@@ -3,14 +3,45 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 
+function isTokenExpired(token) {
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return Date.now() >= payload.exp * 1000;
+    } catch {
+        return true;
+    }
+}
+
 export default function OrderSummaryPage() {
     const searchParams = useSearchParams();
     const router = useRouter();
 
     const productId = searchParams.get('product');
     const quantity = parseInt(searchParams.get('quantity') || '1', 10);
+
     const [cart, setCart] = useState([]);
     const [hasAdded, setHasAdded] = useState(false);
+    const [fullProducts, setFullProducts] = useState([]);
+    const [addresses, setAddresses] = useState([]);
+    const [payments, setPayments] = useState([]);
+    const [shippings, setShippings] = useState([]);
+    const [selectedShippingId, setSelectedShippingId] = useState(null);
+
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    useEffect(() => {
+        function checkAuth() {
+            const token = localStorage.getItem('jwt_access');
+            if (token && !isTokenExpired(token)) {
+                setIsLoggedIn(true);
+            } else {
+                localStorage.removeItem('jwt_access');
+                setIsLoggedIn(false);
+            }
+        }
+        checkAuth();
+        const interval = setInterval(checkAuth, 60000);
+        return () => clearInterval(interval);
+    }, []);
 
     useEffect(() => {
         const addingProduct = sessionStorage.getItem('addingProduct');
@@ -31,6 +62,49 @@ export default function OrderSummaryPage() {
         setCart(existingCart);
     }, [productId, quantity, hasAdded]);
 
+    useEffect(() => {
+        const fetchProductDetails = async () => {
+            if (cart.length === 0) return;
+            try {
+                const res = await fetch(`/api/products/bulk/?ids=${cart.map(item => item.id).join(',')}`);
+                const data = await res.json();
+                const enriched = cart.map(item => {
+                    const product = data.find(p => p.id === item.id);
+                    return product ? { ...product, quantity: item.quantity } : null;
+                }).filter(Boolean);
+                setFullProducts(enriched);
+            } catch (err) {
+                console.error('Error loading products', err);
+            }
+        };
+        fetchProductDetails();
+    }, [cart]);
+
+    useEffect(() => {
+        const fetchUserData = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                const headers = { Authorization: `Bearer ${token}` };
+
+                const [addrRes, payRes, shipRes] = await Promise.all([
+                    fetch('/api/user/addresses/', { headers }),
+                    fetch('/api/user/payments/', { headers }),
+                    fetch('/api/user/shippings/', { headers })
+                ]);
+
+                setAddresses(await addrRes.json());
+                setPayments(await payRes.json());
+                const shipData = await shipRes.json();
+                setShippings(shipData);
+                if (shipData.length > 0) setSelectedShippingId(shipData[0].id);
+            } catch (err) {
+                console.error('Error loading user data:', err);
+            }
+        };
+
+        fetchUserData();
+    }, []);
+
     const updateQuantity = (id, newQty) => {
         let updatedCart;
         if (newQty <= 0) {
@@ -42,17 +116,10 @@ export default function OrderSummaryPage() {
         localStorage.setItem('cart', JSON.stringify(updatedCart));
     };
 
-    const products = [];
-
-    const fullProducts = cart
-        .map(item => {
-            const product = products.find(p => p.id === item.id);
-            return product ? { ...product, quantity: item.quantity } : null;
-        })
-        .filter(Boolean);
-
     const totalPrice = fullProducts.reduce((sum, p) => sum + p.price * p.quantity, 0);
-    const shipping = 30;
+    const selectedShipping = shippings.find(s => s.id === Number(selectedShippingId));
+    const shippingFee = selectedShipping?.fee || 0;
+    const totalWithShipping = totalPrice + shippingFee;
 
     const handleConfirm = () => {
         alert('ยืนยันคำสั่งซื้อเรียบร้อยแล้ว');
@@ -89,9 +156,13 @@ export default function OrderSummaryPage() {
                     </div>
                     <div className="flex gap-4 items-center">
                         <Link href="/order" className="relative p-2 border rounded-full hover:bg-gray-100 transition-colors duration-200 ease-in-out">🛒</Link>
-                        <Link href="/login" className="bg-yellow-400 hover:bg-yellow-500 text-white font-bold px-4 py-2 rounded-full transition-colors duration-200">
-                            Sign In
-                        </Link>
+                        {isLoggedIn ? (
+                            <Link href="/profile" className="w-10 h-10 rounded-full overflow-hidden border hover:ring-2 ring-yellow-500 transition-all duration-200">
+                                <Image src="/images/user-profile.jpg" alt="Profile" width={40} height={40} />
+                            </Link>
+                        ) : (
+                            <Link href="/login" className="bg-yellow-400 hover:bg-yellow-500 text-white font-bold px-4 py-2 rounded-full transition-colors duration-200">Sign In</Link>
+                        )}
                     </div>
                 </div>
             </header>
@@ -124,8 +195,8 @@ export default function OrderSummaryPage() {
                             <div className="mt-6 bg-white p-4 rounded shadow">
                                 <h4 className="font-bold mb-2">Payment Information:</h4>
                                 <p>รวมการสั่งซื้อ: ฿{totalPrice.toLocaleString()}</p>
-                                <p>ค่าจัดส่ง: ฿{shipping.toLocaleString()}</p>
-                                <p className="font-bold">ยอดชำระทั้งหมด: ฿{(totalPrice + shipping).toLocaleString()}</p>
+                                <p>ค่าจัดส่ง: ฿{shippingFee.toLocaleString()}</p>
+                                <p className="font-bold">ยอดชำระทั้งหมด: ฿{totalWithShipping.toLocaleString()}</p>
                                 <div className="mt-2">
                                     <label className="inline-flex items-center">
                                         <input type="checkbox" className="form-checkbox text-yellow-500" />
@@ -138,18 +209,33 @@ export default function OrderSummaryPage() {
                             </div>
                         )}
                     </div>
+
                     <div className="md:w-1/3 bg-white bg-opacity-95 p-4 rounded shadow space-y-4">
                         <div>
                             <label htmlFor="address" className="font-semibold">Address</label>
-                            <textarea id="address" className="w-full border rounded p-2 mt-1" rows={4} />
+                            <select id="address" className="w-full border rounded p-2 mt-1">
+                                {addresses.map(addr => (
+                                    <option key={addr.id} value={addr.id}>{addr.address_line}</option>
+                                ))}
+                            </select>
                         </div>
                         <div>
                             <label htmlFor="shipping" className="font-semibold">Shipping</label>
-                            <input id="shipping" className="w-full border rounded p-2 mt-1" />
+                            <select id="shipping" className="w-full border rounded p-2 mt-1" onChange={e => setSelectedShippingId(Number(e.target.value))} value={selectedShippingId || ''}>
+                                {shippings.map(ship => (
+                                    <option key={ship.id} value={ship.id}>{ship.method} - ฿{ship.fee}</option>
+                                ))}
+                            </select>
                         </div>
                         <div>
                             <label htmlFor="payment" className="font-semibold">Payment</label>
-                            <input id="payment" className="w-full border rounded p-2 mt-1" />
+                            <select id="payment" className="w-full border rounded p-2 mt-1">
+                                {payments.map(pay => (
+                                    <option key={pay.id} value={pay.id}>
+                                        {pay.card_number.slice(-4).padStart(pay.card_number.length, '*')}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -166,7 +252,7 @@ export default function OrderSummaryPage() {
                     <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="relative text-gray-600 font-medium group mt-2 sm:mt-0">
                         <span className="relative inline-block px-1">
                             Back to top ↑
-                            <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-grey-500 group-hover:w-full transition-all duration-300" />
+                            <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-gray-500 group-hover:w-full transition-all duration-300" />
                         </span>
                     </button>
                 </div>
