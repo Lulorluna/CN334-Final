@@ -29,6 +29,7 @@ export default function OrderSummaryPage() {
     const [shippings, setShippings] = useState([]);
     const [selectedShippingId, setSelectedShippingId] = useState(null);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [accepted, setAccepted] = useState(false);
 
     useEffect(() => {
         const stored = JSON.parse(localStorage.getItem('cart') || '[]');
@@ -49,25 +50,25 @@ export default function OrderSummaryPage() {
             setHasAdded(true);
         }
     }, [productId, quantity, hasAdded]);
-
     useEffect(() => {
         const checkAuth = () => {
             const token = localStorage.getItem('jwt_access');
             const valid = !!token && !isTokenExpired(token);
             setIsLoggedIn(valid);
 
-            if (!valid && router.pathname !== '/login') {
+            if (!valid) {
                 localStorage.removeItem('jwt_access');
+                localStorage.removeItem('cart');
+                setCart([]);
+                setFullProducts([]);
                 router.push('/login');
             }
         };
 
         checkAuth();
         const id = setInterval(checkAuth, 60000);
-
         return () => clearInterval(id);
     }, [router]);
-
 
     useEffect(() => {
         if (!isLoggedIn) return;
@@ -78,47 +79,49 @@ export default function OrderSummaryPage() {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 const { cart_orders } = await res.json();
-                const formatted = cart_orders.flatMap(o =>
+                const fetched = cart_orders.flatMap(o =>
                     o.items.map(i => ({ id: i.product, quantity: i.quantity }))
                 );
-                setCart(formatted);
-                localStorage.setItem('cart', JSON.stringify(formatted));
+                setCart(fetched);
+                localStorage.setItem('cart', JSON.stringify(fetched));
             } catch (e) {
                 console.error(e);
             }
         })();
-    }, [isLoggedIn]);
+    }, [isLoggedIn, hasAdded]);
+
 
 
     useEffect(() => {
+        if (!isLoggedIn) {
+            setFullProducts([]);
+            return;
+        }
         if (!cart.length) return setFullProducts([]);
+
         (async () => {
             try {
                 const details = await Promise.all(
                     cart.map(({ id }) =>
                         fetch(`http://127.0.0.1:3341/api/product/${id}/`)
                             .then(r => r.json())
-                            .then(json => {
-                                console.log(`Product ${id}:`, json);
-                                return json;
-                            })
+                            .then(json => json)
                     )
                 );
-                console.log(details)
                 const enriched = details.map((p, i) => ({
                     id: p.data.id,
-                    name: p.data.name || '—',
+                    name: p.data.name,
                     image: p.data.image || '/images/placeholder.png',
                     price: Number(p.data.price) || 0,
                     quantity: cart[i].quantity,
+                    stock: p.data.stock || 0,
                 }));
-
                 setFullProducts(enriched);
             } catch (e) {
                 console.error(e);
             }
         })();
-    }, [cart]);
+    }, [cart, isLoggedIn]);
 
     useEffect(() => {
         (async () => {
@@ -142,27 +145,82 @@ export default function OrderSummaryPage() {
         })();
     }, []);
 
-    const updateQty = (id, qty) => {
-        const updated = qty > 0
-            ? cart.map(i => i.id === id ? { ...i, quantity: qty } : i)
-            : cart.filter(i => i.id !== id);
-        setCart(updated);
-        localStorage.setItem('cart', JSON.stringify(updated));
+    const removeFromBackendCart = async (productId) => {
+        try {
+            const token = localStorage.getItem('jwt_access');
+            const res = await fetch(`http://127.0.0.1:3341/api/cart/remove/${productId}/`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (!res.ok) throw new Error('Failed to remove item');
+        } catch (err) {
+            console.error('Remove failed:', err);
+        }
+    };
+
+    const updateBackendCart = async (productId, quantity) => {
+        try {
+            const token = localStorage.getItem('jwt_access');
+            await fetch(`http://127.0.0.1:3341/api/cart/update/${productId}/`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({ quantity }),
+            });
+        } catch (err) {
+            console.error('Backend update failed:', err);
+        }
+    };
+
+    const updateQty = async (id, newQty) => {
+        try {
+            if (newQty === 0) {
+                await removeFromBackendCart(id);
+            } else {
+                await updateBackendCart(id, newQty);
+            }
+
+            const updated = newQty > 0
+                ? cart.map(i => i.id === id ? { ...i, quantity: newQty } : i)
+                : cart.filter(i => i.id !== id);
+            setCart(updated);
+            localStorage.setItem('cart', JSON.stringify(updated));
+        } catch (err) {
+            console.error('Failed to update quantity:', err);
+        }
     };
 
     const subtotal = fullProducts.reduce((sum, p) => sum + p.price * p.quantity, 0);
     const shipFee = shippings.find(s => s.id === Number(selectedShippingId))?.fee || 0;
 
-    const handleConfirm = () => {
-        alert('ยืนยันเรียบร้อย');
-        localStorage.removeItem('cart');
-        setCart([]);
-        router.push('/');
+    const handleConfirm = async () => {
+        try {
+            const token = localStorage.getItem('jwt_access');
+            const res = await fetch('http://127.0.0.1:3341/api/order/confirm/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Confirm failed');
+
+            alert('ยืนยันเรียบร้อย');
+            localStorage.removeItem('cart');
+            setCart([]);
+            router.push('/');
+        } catch (err) {
+            console.error(err);
+            alert('ยืนยันคำสั่งซื้อไม่สำเร็จ: ' + err.message);
+        }
     };
+
 
     return (
         <div className="flex flex-col min-h-screen bg-cover" style={{ backgroundImage: "url('/images/bg.png')" }}>
-            {/* Navbar */}
             <header className="fixed top-0 w-full bg-[#fdf6e3] shadow-md z-50">
                 <div className="container mx-auto flex items-center justify-between p-4">
                     <Link href="/" className="flex items-center gap-2">
@@ -208,7 +266,14 @@ export default function OrderSummaryPage() {
                                 <div className="flex items-center gap-2">
                                     <button onClick={() => updateQty(item.id, item.quantity - 1)} disabled={item.quantity <= 1} className="w-8 h-8 flex items-center justify-center bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50">−</button>
                                     <span className="font-medium">{item.quantity}</span>
-                                    <button onClick={() => updateQty(item.id, item.quantity + 1)} className="w-8 h-8 flex items-center justify-center bg-gray-200 rounded hover:bg-gray-300">+</button>
+                                    <button
+                                        onClick={() => updateQty(item.id, item.quantity + 1)}
+                                        disabled={item.quantity >= item.stock}
+                                        className={`w-8 h-8 flex items-center justify-center rounded 
+                                        ${item.quantity >= item.stock ? 'bg-gray-200 cursor-not-allowed opacity-50' : 'bg-gray-200 hover:bg-gray-300'}`}
+                                    >
+                                        +
+                                    </button>
                                     <button onClick={() => updateQty(item.id, 0)} className="ml-4 text-red-500 hover:text-red-700">✕</button>
                                 </div>
                             </div>
@@ -221,8 +286,27 @@ export default function OrderSummaryPage() {
                             <div className="flex justify-between mb-2"><span>รวมสินค้า</span><span>฿{subtotal.toLocaleString()}</span></div>
                             <div className="flex justify-between mb-4"><span>ค่าจัดส่ง</span><span>฿{shipFee.toLocaleString()}</span></div>
                             <div className="flex justify-between font-bold text-lg mb-4"><span>ยอดรวมทั้งหมด</span><span>฿{(subtotal + shipFee).toLocaleString()}</span></div>
-                            <label className="flex items-center gap-2"><input type="checkbox" className="text-yellow-500" />ยอมรับเงื่อนไข</label>
-                            <button onClick={handleConfirm} className="mt-6 w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-lg font-bold transition">ยืนยันการสั่งซื้อ</button>
+                            <label className="flex items-center gap-2">
+                                <input
+                                    type="checkbox"
+                                    className="text-yellow-500"
+                                    checked={accepted}
+                                    onChange={(e) => setAccepted(e.target.checked)}
+                                />
+                                ยอมรับเงื่อนไข
+                            </label>
+                            <button
+                                onClick={handleConfirm}
+                                disabled={!accepted}
+                                className={`mt-6 w-full py-3 rounded-lg font-bold transition 
+                                ${accepted
+                                        ? 'bg-green-500 hover:bg-green-600 text-white'
+                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+                            >
+                                ยืนยันการสั่งซื้อ
+                            </button>
+
+
                         </div>
                     )}
                 </div>
@@ -252,13 +336,23 @@ export default function OrderSummaryPage() {
                     </div>
                 </div>
             </main>
-            <footer className="bg-gray-100 py-6 text-center mt-auto">
+            <footer className="bg-gray-100 py-6">
                 <div className="flex justify-center gap-2 mb-4">
-                    {[...Array(4)].map((_, i) => <span key={i} className="w-4 h-4 bg-gray-400 rounded-full inline-block" />)}
+                    {[1, 2, 3, 4].map((_, idx) => (
+                        <span key={idx} className="w-4 h-4 bg-gray-400 rounded-full inline-block" />
+                    ))}
                 </div>
-                <div className="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-center text-gray-600 px-4">
+                <div className="container mx-auto px-4 flex flex-col sm:flex-row justify-between items-center text-gray-600">
                     <span>About us</span>
-                    <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="hover:underline mt-2 sm:mt-0">Back to top ↑</button>
+                    <button
+                        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                        className="relative text-gray-600 font-medium group mt-2 sm:mt-0"
+                    >
+                        <span className="relative inline-block px-1">
+                            Back to top ↑
+                            <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-gray-500 group-hover:w-full transition-all duration-300" />
+                        </span>
+                    </button>
                 </div>
             </footer>
         </div>

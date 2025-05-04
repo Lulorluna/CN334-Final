@@ -65,6 +65,22 @@ class ProductOrder(models.Model):
     def total_price(self):
         return self.product.price * self.quantity
 
+    def save(self, *args, **kwargs):
+        # เช็คว่า order เป็นตะกร้า
+        if self.order.status == Order.STATUS_CART:
+            existing = (
+                ProductOrder.objects.filter(order=self.order, product=self.product)
+                .exclude(pk=self.pk)
+                .first()
+            )
+            existing_quantity = existing.quantity if existing else 0
+            total_quantity = self.quantity + existing_quantity
+
+            if total_quantity > self.product.stock:
+                raise ValueError(f"จำนวนสินค้าเกิน stock ที่มีอยู่ ({self.product.stock})")
+
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"Order {self.order.pk}: {self.product.name}"
 

@@ -148,11 +148,6 @@ export default function ProductDetailPage() {
                             >+</button>
                         </div>
 
-                        <label className="inline-flex items-center mt-2 space-x-2">
-                            <input type="checkbox" className="form-checkbox" disabled={!product.available} />
-                            <span>Add to Cart</span>
-                        </label>
-
                         <button
                             className="bg-green-500 hover:bg-green-600 text-white py-2 rounded-full font-bold disabled:opacity-50"
                             onClick={handleConfirm}

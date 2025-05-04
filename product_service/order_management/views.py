@@ -100,6 +100,52 @@ class RemoveFromCartView(APIView):
         return Response({"message": "Product removed from cart"}, status=200)
 
 
+class UpdateCartItemView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, product_id):
+        # หา Order (cart) ของผู้ใช้
+        order = Order.objects.filter(
+            customer=request.user, status=Order.STATUS_CART
+        ).first()
+        if not order:
+            return Response({"error": "Cart not found"}, status=404)
+
+        # หา ProductOrder
+        prod_order = ProductOrder.objects.filter(
+            order=order, product_id=product_id
+        ).first()
+        if not prod_order:
+            return Response({"error": "Product not in cart"}, status=404)
+
+        # อ่าน quantity ใหม่จาก request body
+        new_qty = request.data.get("quantity")
+        try:
+            new_qty = int(new_qty)
+        except (TypeError, ValueError):
+            return Response({"error": "Invalid quantity"}, status=404)
+
+        if new_qty < 1:
+            # ถ้าต้องการลบเมื่อ qty < 1 ก็ลบแล้ว return
+            prod_order.delete()
+            return Response({"message": "Product removed from cart"}, status=200)
+
+        # อัปเดตจำนวนสินค้า (ตรวจ stock ถ้าต้องการ)
+        product = get_object_or_404(Product, pk=product_id)
+        if product.stock < new_qty:
+            return Response(
+                {"error": f"Not enough stock (available {product.stock})"},
+                status=400,
+            )
+
+        prod_order.quantity = new_qty
+        prod_order.save()
+
+        # ตอบกลับด้วย serializer เดิม
+        serializer = ProductOrderSerializer(prod_order)
+        return Response({"message": "Quantity updated", "data": serializer.data})
+
+
 class ConfirmOrderView(APIView):
     permission_classes = [IsAuthenticated]
 

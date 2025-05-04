@@ -41,6 +41,7 @@ urlpatterns = [
         RemoveFromCartView.as_view(),
         name="remove-from-cart",
     ),
+    path("api/cart/update/<int:product_id>/", UpdateCartItemView.as_view()),
     path("api/order/confirm/", ConfirmOrderView.as_view(), name="confirm-order"),
     path("api/shipping/", ShippingListView.as_view(), name="shipping-list"),
     path(
