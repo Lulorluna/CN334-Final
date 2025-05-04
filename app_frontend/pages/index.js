@@ -156,7 +156,7 @@ export default function HomePage() {
           >
             <span className="relative inline-block px-1">
               Back to top ↑
-              <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-yellow-500 group-hover:w-full transition-all duration-300" />
+              <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-gray-500 group-hover:w-full transition-all duration-300" />
             </span>
           </button>
         </div>
