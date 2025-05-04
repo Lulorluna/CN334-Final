@@ -40,7 +40,9 @@ class OrderDetailSerializer(serializers.ModelSerializer):
     )
     shipping_fee = serializers.SerializerMethodField()
     shipping_method = serializers.SerializerMethodField()
-    shipping_address = serializers.IntegerField(read_only=True)
+    shipping_address = serializers.IntegerField(
+        source="shipping_address_id", read_only=True
+    )
 
     class Meta:
         model = Order

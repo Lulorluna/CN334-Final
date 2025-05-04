@@ -30,6 +30,8 @@ export default function OrderSummaryPage() {
     const [selectedShippingId, setSelectedShippingId] = useState(null);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [accepted, setAccepted] = useState(false);
+    const [selectedAddressId, setSelectedAddressId] = useState(null);
+    const [selectedPaymentId, setSelectedPaymentId] = useState(null);
 
     useEffect(() => {
         const stored = JSON.parse(localStorage.getItem('cart') || '[]');
@@ -133,12 +135,19 @@ export default function OrderSummaryPage() {
                     fetch('http://127.0.0.1:3342/api/payment/', { headers }),
                     fetch('http://127.0.0.1:3341/api/shipping/', { headers }),
                 ]);
-                const { data: al = [] } = await ar.json(); setAddresses(al);
-                const { data: pl = [] } = await pr.json(); setPayments(pl);
+                const { data: al = [] } = await ar.json();
+                const { data: pl = [] } = await pr.json();
                 const sj = await sr.json();
                 const sl = Array.isArray(sj) ? sj : sj.data || [];
+
+                setAddresses(al);
+                setPayments(pl);
                 setShippings(sl);
+
+                if (al.length) setSelectedAddressId(al[0].id);
+                if (pl.length) setSelectedPaymentId(pl[0].id);
                 if (sl.length) setSelectedShippingId(sl[0].id);
+                // ——————————————————————————
             } catch (e) {
                 console.error(e);
             }
@@ -196,6 +205,10 @@ export default function OrderSummaryPage() {
     const shipFee = shippings.find(s => s.id === Number(selectedShippingId))?.fee || 0;
 
     const handleConfirm = async () => {
+        if (!selectedAddressId || !selectedPaymentId || !selectedShippingId) {
+            alert('กรุณาเลือกที่อยู่ วิธีจัดส่ง และวิธีชำระเงิน');
+            return;
+        }
         try {
             const token = localStorage.getItem('jwt_access');
             const res = await fetch('http://127.0.0.1:3341/api/order/confirm/', {
@@ -204,14 +217,23 @@ export default function OrderSummaryPage() {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`,
                 },
+                body: JSON.stringify({
+                    address_id: selectedAddressId,
+                    payment_id: selectedPaymentId,
+                    shipping_id: selectedShippingId
+                }),
             });
+
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Confirm failed');
 
+            const orderId = data.order_id;
             alert('ยืนยันเรียบร้อย');
+
             localStorage.removeItem('cart');
             setCart([]);
-            router.push('/summarize');
+
+            router.push(`/summarize/${orderId}`);
         } catch (err) {
             console.error(err);
             alert('ยืนยันคำสั่งซื้อไม่สำเร็จ: ' + err.message);
@@ -316,22 +338,43 @@ export default function OrderSummaryPage() {
                     <h3 className="font-bold text-lg mb-4">ข้อมูลการจัดส่ง</h3>
                     <div className="mb-4">
                         <label className="block font-medium mb-1">ที่อยู่</label>
-                        <select id="address" className="w-full border rounded p-2 mt-1 h-24">
-                            {addresses.map(addr => (
-                                <option key={addr.id} value={addr.id}>{addr.receiver_name} — {addr.district}, {addr.province}</option>
+                        <select
+                            value={selectedAddressId || ''}
+                            onChange={e => setSelectedAddressId(Number(e.target.value))}
+                        >
+                            {addresses.map(a => (
+                                <option key={a.id} value={a.id}>
+                                    {a.receiver_name} — {a.district}, {a.province}
+                                </option>
                             ))}
                         </select>
                     </div>
                     <div className="mb-4">
                         <label className="block font-medium mb-1">วิธีจัดส่ง</label>
-                        <select className="w-full border rounded px-3 py-2" value={selectedShippingId || ''} onChange={e => setSelectedShippingId(Number(e.target.value))}>
-                            {shippings.map(s => <option key={s.id} value={s.id}>{s.method} — ฿{s.fee}</option>)}
+                        <select
+                            value={selectedShippingId || ''}
+                            onChange={e => setSelectedShippingId(Number(e.target.value))}
+                            className="w-full border rounded px-3 py-2"
+                        >
+                            {shippings.map(s => (
+                                <option key={s.id} value={s.id}>
+                                    {s.method} — ฿{s.fee.toLocaleString()}
+                                </option>
+                            ))}
                         </select>
                     </div>
                     <div className="mb-4">
                         <label className="block font-medium mb-1">วิธีชำระเงิน</label>
-                        <select className="w-full border rounded px-3 py-2">
-                            {payments.map(p => <option key={p.id} value={p.id}>**** **** **** {p.card_no.slice(-4)}</option>)}
+                        <select
+                            value={selectedPaymentId || ''}
+                            onChange={e => setSelectedPaymentId(Number(e.target.value))}
+                            className="w-full border rounded px-3 py-2"
+                        >
+                            {payments.map(p => (
+                                <option key={p.id} value={p.id}>
+                                    **** **** **** {p.card_no.slice(-4)}
+                                </option>
+                            ))}
                         </select>
                     </div>
                 </div>

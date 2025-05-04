@@ -161,24 +161,43 @@ class ConfirmOrderView(APIView):
         order = Order.objects.filter(
             customer=request.user, status=Order.STATUS_CART
         ).first()
-
         if not order:
             return Response({"error": "Order not found or not in cart"}, status=404)
 
+        address_id = request.data.get("address_id")
+        payment_id = request.data.get("payment_id")
+        shipping_id = request.data.get("shipping_id")
+
+        if not all([address_id, payment_id, shipping_id]):
+            return Response(
+                {"error": "address_id, payment_id และ shipping_id ต้องระบุให้ครบ"},
+                status=400,
+            )
+
+        order.shipping_address_id = address_id
+        order.user_payment_method_id = payment_id
+
+        shipping_obj = get_object_or_404(Shipping, pk=shipping_id)
+        order.shipping = shipping_obj
+
+        order.save()
+
         order.status = Order.STATUS_PENDING
         order.save()
-        product_orders = ProductOrder.objects.filter(order=order)
-        for product_order in product_orders:
-            product = product_order.product
-            if product.stock >= product_order.quantity:
-                product.stock -= product_order.quantity
-                product.save()
+
+        for po in ProductOrder.objects.filter(order=order):
+            if po.product.stock >= po.quantity:
+                po.product.stock -= po.quantity
+                po.product.save()
             else:
                 return Response(
-                    {"error": f"Not enough stock for {product.name}"}, status=400
+                    {"error": f"Not enough stock for {po.product.name}"}, status=400
                 )
 
-        return Response({"message": "Order confirmed and stock updated"}, status=200)
+        return Response(
+            {"message": "Order confirmed and stock updated", "order_id": order.id},
+            status=200,
+        )
 
 
 class ShippingListView(APIView):

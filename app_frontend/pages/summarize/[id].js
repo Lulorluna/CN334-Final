@@ -25,7 +25,24 @@ export default function SummarizePage() {
 
     useEffect(() => {
         const token = localStorage.getItem('jwt_access');
-        setIsLoggedIn(!!token && !isTokenExpired(token));
+        if (!token || isTokenExpired(token)) {
+            router.replace('/login');
+        }
+    }, [router]);
+
+    useEffect(() => {
+        function checkAuth() {
+            const token = localStorage.getItem('jwt_access');
+            if (token && !isTokenExpired(token)) {
+                setIsLoggedIn(true);
+            } else {
+                localStorage.removeItem('jwt_access');
+                setIsLoggedIn(false);
+            }
+        }
+        checkAuth();
+        const interval = setInterval(checkAuth, 60000);
+        return () => clearInterval(interval);
     }, []);
 
     useEffect(() => {
@@ -55,11 +72,12 @@ export default function SummarizePage() {
                 const totalPrice = parseFloat(order.total_price);
                 let address = 'ไม่พบที่อยู่';
                 if (order.shipping_address) {
-                    const aRes = await fetch(`http://127.0.0.1:3342/api/address/${order.shipping_address}/`, {
-                        headers: { Authorization: `Bearer ${token}` }
-                    });
-                    if (aRes.ok) {
-                        const { data: addr } = await aRes.json();
+                    const data_addr = await fetch(
+                        `http://127.0.0.1:3342/api/address/${order.shipping_address}/`,
+                        { headers: { Authorization: `Bearer ${token}` } }
+                    );
+                    if (data_addr.ok) {
+                        const { data: addr } = await data_addr.json();
                         address = `${addr.receiver_name}, ${addr.house_number}, ${addr.district}, ${addr.province} ${addr.post_code}`;
                     }
                 }
@@ -95,22 +113,43 @@ export default function SummarizePage() {
 
             <header className="fixed top-0 w-full bg-[#fdf6e3] shadow-md z-50">
                 <div className="container mx-auto flex items-center justify-between p-4">
-                    <Link href="/" className="flex items-center gap-2">
-                        <Image src="/images/logo.png" width={40} height={40} alt="Logo" />
-                        <span className="font-bold text-gray-800 text-xl">Meal of Hope</span>
-                    </Link>
-                    <nav className="flex gap-6">
-                        {['Home', 'About Us', 'Product'].map((t, i) => {
-                            const href = t === 'Home' ? '/' : t === 'About Us' ? '/about' : '/product-list';
-                            return <Link key={i} href={href} className="text-gray-800 font-semibold hover:text-yellow-500 transition">{t}</Link>;
-                        })}
-                    </nav>
-                    <div className="flex gap-4">
-                        <Link href="/order" className="p-2 border rounded-full hover:bg-gray-100">🛒</Link>
+
+                    <div className="flex items-center gap-8">
+                        <Link href="/" className="flex items-center gap-2 group">
+                            <Image src="/images/logo.png" width={40} height={40} alt="Logo" />
+                            <span className="relative text-xl font-bold text-gray-800 px-1">
+                                Meal of Hope
+                                <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-yellow-500 group-hover:w-full transition-all duration-300" />
+                            </span>
+                        </Link>
+
+                        <nav className="flex gap-6">
+                            {['Home', 'About Us', 'Product'].map((text, idx) => {
+                                const href = text === 'Home' ? '/' : text === 'About Us' ? '/about' : '/product-list';
+                                return (
+                                    <Link key={idx} href={href} className="relative text-gray-800 font-semibold group">
+                                        <span className="relative inline-block px-1">
+                                            {text}
+                                            <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-yellow-500 group-hover:w-full transition-all duration-300" />
+                                        </span>
+                                    </Link>
+                                );
+                            })}
+                        </nav>
+                    </div>
+
+                    <div className="flex gap-4 items-center">
+                        <Link href="/order" className="relative p-2 border rounded-full hover:bg-gray-100 transition-colors duration-200 ease-in-out">
+                            🛒
+                        </Link>
                         {isLoggedIn ? (
-                            <Link href="/profile" className="w-10 h-10 rounded-full overflow-hidden border hover:ring-2 ring-yellow-500 transition"><Image src="/images/user-profile.jpg" width={40} height={40} alt="Profile" /></Link>
+                            <Link href="/profile" className="w-10 h-10 rounded-full overflow-hidden border hover:ring-2 ring-yellow-500 transition-all duration-200">
+                                <Image src="/images/user-profile.jpg" alt="Profile" width={40} height={40} />
+                            </Link>
                         ) : (
-                            <Link href="/login" className="bg-yellow-400 hover:bg-yellow-500 text-white px-4 py-2 rounded-full font-bold">Sign In</Link>
+                            <Link href="/login" className="bg-yellow-400 hover:bg-yellow-500 transition-colors duration-200 ease-in-out text-white font-bold px-4 py-2 rounded-full">
+                                Sign In
+                            </Link>
                         )}
                     </div>
                 </div>
@@ -173,8 +212,8 @@ export default function SummarizePage() {
                     </div>
 
                     <div className="text-center">
-                        <Link href="/product-list">
-                            <button className="bg-yellow-500 hover:bg-yellow-600 text-white px-8 py-3 rounded-full font-bold shadow hover:shadow-lg transition">🛍️ เลือกสินค้าเพิ่ม</button>
+                        <Link href="/">
+                            <button className="bg-yellow-500 hover:bg-yellow-600 text-white px-8 py-3 rounded-full font-bold shadow hover:shadow-lg transition">กลับหน้าหลัก</button>
                         </Link>
                     </div>
                 </div>
