@@ -28,8 +28,9 @@ urlpatterns = [
         ProductDetailView.as_view(),
         name="product-detail",
     ),
+    path("api/order/<int:id>/", OrderDetailView.as_view(), name="order-detail"),
     path("api/history/", UserOrderListView.as_view(), name="user-orders"),
-    path("api/orders/cart/", CartOrderView.as_view(), name="cart-orders"),
+    path("api/cart/", CartOrderView.as_view(), name="cart-orders"),
     path(
         "api/orders/products/<int:order_id>",
         ProductsInUserOrdersView.as_view(),
@@ -41,6 +42,7 @@ urlpatterns = [
         RemoveFromCartView.as_view(),
         name="remove-from-cart",
     ),
+    path("api/cart/update/<int:product_id>/", UpdateCartItemView.as_view()),
     path("api/order/confirm/", ConfirmOrderView.as_view(), name="confirm-order"),
     path("api/shipping/", ShippingListView.as_view(), name="shipping-list"),
     path(

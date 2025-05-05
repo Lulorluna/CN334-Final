@@ -21,6 +21,48 @@ class ProductOrderSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "product_name", "product_price", "total_price"]
 
 
+class ProductOrderDetailSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(source="product.name", read_only=True)
+    price = serializers.DecimalField(
+        source="product.price", max_digits=12, decimal_places=2, read_only=True
+    )
+    product = serializers.IntegerField(source="product.id", read_only=True)
+
+    class Meta:
+        model = ProductOrder
+        fields = ["product", "name", "price", "quantity"]
+
+
+class OrderDetailSerializer(serializers.ModelSerializer):
+    items = ProductOrderDetailSerializer(many=True, read_only=True)
+    total_price = serializers.DecimalField(
+        max_digits=12, decimal_places=2, read_only=True
+    )
+    shipping_fee = serializers.SerializerMethodField()
+    shipping_method = serializers.SerializerMethodField()
+    shipping_address = serializers.IntegerField(
+        source="shipping_address_id", read_only=True
+    )
+
+    class Meta:
+        model = Order
+        fields = [
+            "id",
+            "create_at",
+            "items",
+            "total_price",
+            "shipping_fee",
+            "shipping_method",
+            "shipping_address",
+        ]
+
+    def get_shipping_fee(self, obj):
+        return float(obj.shipping.fee) if obj.shipping else 0.0
+
+    def get_shipping_method(self, obj):
+        return obj.shipping.method if obj.shipping else None
+
+
 class OrderSerializer(serializers.ModelSerializer):
     items = ProductOrderSerializer(many=True, read_only=True)
 
@@ -40,6 +82,12 @@ class OrderSerializer(serializers.ModelSerializer):
         ]
 
 
+class ShippingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Shipping
+        fields = "__all__"
+
+
 class OrderHistorySerializer(serializers.ModelSerializer):
     items = ProductOrderSerializer(many=True, read_only=True)
 
@@ -52,11 +100,8 @@ class OrderHistorySerializer(serializers.ModelSerializer):
             "items",
         ]
 
-
-class ShippingSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Shipping
-        fields = "__all__"
+    def get_shipping_fee(self, obj):
+        return float(obj.shipping.fee) if obj.shipping else 0.0
 
 
 class PaymentSerializer(serializers.ModelSerializer):
