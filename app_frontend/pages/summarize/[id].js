@@ -1,6 +1,4 @@
-'use client';
-
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -22,6 +20,8 @@ export default function SummarizePage() {
     const [orderDate, setOrderDate] = useState('');
     const [loading, setLoading] = useState(true);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const dropdownRef = useRef(null);
 
     useEffect(() => {
         const token = localStorage.getItem('jwt_access');
@@ -57,6 +57,7 @@ export default function SummarizePage() {
                 });
                 if (!res.ok) throw new Error('การดึงคำสั่งซื้อล้มเหลว');
                 const order = await res.json();
+
                 setOrderId(order.id);
                 setOrderDate(new Date(order.create_at).toLocaleDateString('th-TH', {
                     year: 'numeric', month: 'long', day: 'numeric'
@@ -71,13 +72,14 @@ export default function SummarizePage() {
                 const shipping = parseFloat(order.shipping_fee);
                 const totalPrice = parseFloat(order.total_price);
                 let address = 'ไม่พบที่อยู่';
+
                 if (order.shipping_address) {
-                    const data_addr = await fetch(
+                    const dataAddr = await fetch(
                         `http://127.0.0.1:3342/api/address/${order.shipping_address}/`,
                         { headers: { Authorization: `Bearer ${token}` } }
                     );
-                    if (data_addr.ok) {
-                        const { data: addr } = await data_addr.json();
+                    if (dataAddr.ok) {
+                        const { data: addr } = await dataAddr.json();
                         address = `${addr.receiver_name}, ${addr.house_number}, ${addr.district}, ${addr.province} ${addr.post_code}`;
                     }
                 }
@@ -93,11 +95,28 @@ export default function SummarizePage() {
         fetchData();
     }, [orderIdParam]);
 
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setDropdownOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const handleLogout = () => {
+        localStorage.removeItem('jwt_access');
+        setIsLoggedIn(false);
+        router.push('/login');
+    };
+
     if (loading) return (
         <div className="min-h-screen flex justify-center items-center bg-[url('/images/bg.png')] bg-cover text-2xl text-yellow-700">
             กำลังโหลดข้อมูลคำสั่งซื้อ...
         </div>
     );
+
     if (!orderData) return (
         <div className="min-h-screen flex justify-center items-center text-red-600 bg-[url('/images/bg.png')] bg-cover">
             <div className="bg-white/80 p-6 rounded-lg shadow-lg backdrop-blur-md">ไม่พบข้อมูลคำสั่งซื้อ</div>
@@ -106,6 +125,7 @@ export default function SummarizePage() {
 
     const { cart, totalPrice, shipping, address, shippingMethod } = orderData;
     const grandTotal = totalPrice + shipping;
+
 
     return (
         <div className="relative flex flex-col min-h-screen bg-[url('/images/bg.png')] bg-cover bg-center">
@@ -137,13 +157,35 @@ export default function SummarizePage() {
                             );
                         })}
                     </nav>
-                    <div className="flex gap-4">
+                    <div className="flex gap-4 items-center">
                         {isLoggedIn ? (
                             <>
                                 <Link href="/order" className="p-2 border border-[#8b4513] rounded-full hover:bg-[#f4d03f] transition-colors duration-200">🛒</Link>
-                                <Link href="/myprofile" className="w-10 h-10 rounded-full overflow-hidden border hover:ring-2 ring-yellow-500 transition-all duration-200">
-                                    <Image src="/icons/user.png" alt="Profile" width={40} height={40} />
-                                </Link>
+                                <div className="relative" ref={dropdownRef}>
+                                    <button
+                                        onClick={() => setDropdownOpen(!dropdownOpen)}
+                                        className="w-10 h-10 rounded-full overflow-hidden border hover:ring-2 ring-yellow-500 transition-all duration-200"
+                                    >
+                                        <Image src="/icons/user.png" alt="Profile" width={40} height={40} />
+                                    </button>
+                                    {dropdownOpen && (
+                                        <div className="absolute right-0 mt-2 w-40 bg-white border rounded-md shadow-lg z-50">
+                                            <Link
+                                                href="/myprofile"
+                                                className="block px-4 py-2 text-yellow-700 hover:bg-gray-100"
+                                                onClick={() => setDropdownOpen(false)}
+                                            >
+                                                Profile
+                                            </Link>
+                                            <button
+                                                onClick={handleLogout}
+                                                className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
+                                            >
+                                                Logout
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </>
                         ) : (
                             <Link

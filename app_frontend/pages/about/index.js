@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 function isTokenExpired(token) {
     try {
@@ -17,6 +17,8 @@ export default function AboutPage() {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [bgIndex, setBgIndex] = useState(0);
     const bgImages = ['/images/ba1.jpg', '/images/ba2.jpg', '/images/ba3.jpg'];
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const dropdownRef = useRef(null);
 
     useEffect(() => {
         function checkAuth() {
@@ -32,6 +34,22 @@ export default function AboutPage() {
         const interval = setInterval(checkAuth, 60000);
         return () => clearInterval(interval);
     }, []);
+
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setDropdownOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const handleLogout = () => {
+        localStorage.removeItem('jwt_access');
+        setIsLoggedIn(false);
+        router.push('/login');
+    };
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -82,13 +100,35 @@ export default function AboutPage() {
                             );
                         })}
                     </nav>
-                    <div className="flex gap-4">
+                    <div className="flex gap-4 items-center">
                         {isLoggedIn ? (
                             <>
                                 <Link href="/order" className="p-2 border border-[#8b4513] rounded-full hover:bg-[#f4d03f] transition-colors duration-200">🛒</Link>
-                                <Link href="/myprofile" className="w-10 h-10 rounded-full overflow-hidden border hover:ring-2 ring-yellow-500 transition-all duration-200">
-                                    <Image src="/icons/user.png" alt="Profile" width={40} height={40} />
-                                </Link>
+                                <div className="relative" ref={dropdownRef}>
+                                    <button
+                                        onClick={() => setDropdownOpen(!dropdownOpen)}
+                                        className="w-10 h-10 rounded-full overflow-hidden border hover:ring-2 ring-yellow-500 transition-all duration-200"
+                                    >
+                                        <Image src="/icons/user.png" alt="Profile" width={40} height={40} />
+                                    </button>
+                                    {dropdownOpen && (
+                                        <div className="absolute right-0 mt-2 w-40 bg-white border rounded-md shadow-lg z-50">
+                                            <Link
+                                                href="/myprofile"
+                                                className="block px-4 py-2 text-yellow-700 hover:bg-gray-100"
+                                                onClick={() => setDropdownOpen(false)}
+                                            >
+                                                Profile
+                                            </Link>
+                                            <button
+                                                onClick={handleLogout}
+                                                className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
+                                            >
+                                                Logout
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </>
                         ) : (
                             <Link
@@ -185,6 +225,25 @@ export default function AboutPage() {
                     </div>
                 </section>
             </main>
+            <footer className="bg-gray-100 py-6 mt-5">
+                <div className="flex justify-center gap-2 mb-4">
+                    {[1, 2, 3, 4].map((_, idx) => (
+                        <span key={idx} className="w-4 h-4 bg-gray-400 rounded-full inline-block" />
+                    ))}
+                </div>
+                <div className="container mx-auto px-4 flex flex-col sm:flex-row justify-between items-center text-gray-600">
+                    <span>About us</span>
+                    <button
+                        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                        className="relative text-gray-600 font-medium group mt-2 sm:mt-0"
+                    >
+                        <span className="relative inline-block px-1">
+                            Back to top ↑
+                            <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-gray-500 group-hover:w-full transition-all duration-300" />
+                        </span>
+                    </button>
+                </div>
+            </footer>
         </div>
     );
 }

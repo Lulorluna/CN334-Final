@@ -51,6 +51,33 @@ export default function ProfilePage() {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [backgroundImage, setBackgroundImage] = useState('/images/bg1.jpeg');
     const [historyList, setHistoryList] = useState([]);
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const dropdownRef = useRef(null);
+
+    const STATUS_BADGE_CLASSES = {
+        cart: 'bg-red-200    text-red-800',
+        pending: 'bg-amber-200  text-amber-800',
+        processing: 'bg-yellow-200 text-yellow-800',
+        in_transit: 'bg-lime-200   text-lime-800',
+        paid: 'bg-green-200  text-green-800',
+        shipped: 'bg-teal-200   text-teal-800',
+    };
+
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setDropdownOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const handleLogout = () => {
+        localStorage.removeItem('jwt_access');
+        setIsLoggedIn(false);
+        router.push('/login');
+    };
 
     useEffect(() => {
         if (isLoggedIn && activeTab === 'history') {
@@ -246,13 +273,35 @@ export default function ProfilePage() {
                             );
                         })}
                     </nav>
-                    <div className="flex gap-4">
+                    <div className="flex gap-4 items-center">
                         {isLoggedIn ? (
                             <>
                                 <Link href="/order" className="p-2 border border-[#8b4513] rounded-full hover:bg-[#f4d03f] transition-colors duration-200">🛒</Link>
-                                <Link href="/myprofile" className="w-10 h-10 rounded-full overflow-hidden border hover:ring-2 ring-yellow-500 transition-all duration-200">
-                                    <Image src="/icons/user.png" alt="Profile" width={40} height={40} />
-                                </Link>
+                                <div className="relative" ref={dropdownRef}>
+                                    <button
+                                        onClick={() => setDropdownOpen(!dropdownOpen)}
+                                        className="w-10 h-10 rounded-full overflow-hidden border hover:ring-2 ring-yellow-500 transition-all duration-200"
+                                    >
+                                        <Image src="/icons/user.png" alt="Profile" width={40} height={40} />
+                                    </button>
+                                    {dropdownOpen && (
+                                        <div className="absolute right-0 mt-2 w-40 bg-white border rounded-md shadow-lg z-50">
+                                            <Link
+                                                href="/myprofile"
+                                                className="block px-4 py-2 text-yellow-700 hover:bg-gray-100"
+                                                onClick={() => setDropdownOpen(false)}
+                                            >
+                                                Profile
+                                            </Link>
+                                            <button
+                                                onClick={handleLogout}
+                                                className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
+                                            >
+                                                Logout
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </>
                         ) : (
                             <Link
@@ -410,36 +459,40 @@ export default function ProfilePage() {
                             {activeTab === 'history' && (
                                 <>
                                     <div className="space-y-4">
-                                        {historyList.length === 0 ? (
+                                        {historyList.filter(order => order.items.length > 0).length === 0 ? (
                                             <p className="text-gray-500">ยังไม่มีรายการสั่งซื้อ</p>
                                         ) : (
-                                            historyList.map(order => (
-                                                <div key={order.id} className="p-4 border rounded-lg bg-white">
-                                                    <div className="flex justify-between items-center mb-2">
-                                                        <span className="font-semibold">Order #{order.id}</span>
-                                                        <span className="text-sm px-2 py-1 rounded-full 
-                          {order.status === 'paid' ? 'bg-green-200 text-green-800' :
-                           order.status === 'pending' ? 'bg-yellow-200 text-yellow-800' :
-                           'bg-gray-200 text-gray-800'}">
-                                                            {order.status}
-                                                        </span>
+                                            historyList
+                                                .filter(order => order.items.length > 0)
+                                                .map(order => (
+                                                    <div key={order.id} className="p-4 border rounded-lg bg-white">
+                                                        <div className="flex justify-between items-center mb-2">
+                                                            <span className="font-semibold">Order #{order.id}</span>
+                                                            <span
+                                                                className={`text-sm px-2 py-1 rounded-full ${STATUS_BADGE_CLASSES[order.status] || 'bg-gray-200 text-gray-800'
+                                                                    }`}
+                                                            >
+                                                                {order.status}
+                                                            </span>
+                                                        </div>
+                                                        <div className="mb-2">
+                                                            <span className="font-medium">Total:</span> ฿{order.total_price}
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            {order.items.map(item => (
+                                                                <div key={item.id} className="flex justify-between">
+                                                                    <span>{item.product_name} x{item.quantity}</span>
+                                                                    <span>฿{item.total_price}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                        <Link href={`/summarize/${order.id}`}
+                                                            className="inline-block mt-3 text-sm text-[#8b4513] hover:underline">
+                                                            ดูรายละเอียดเพิ่มเติม →
+
+                                                        </Link>
                                                     </div>
-                                                    <div className="mb-2">
-                                                        <span className="font-medium">Total:</span> ฿{order.total_price}
-                                                    </div>
-                                                    <div className="space-y-1">
-                                                        {order.items.map(item => (
-                                                            <div key={item.id} className="flex justify-between">
-                                                                <span>{item.product_name} x{item.quantity}</span>
-                                                                <span>฿{item.total_price}</span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                    <Link href={`/order/${order.id}`} className="inline-block mt-3 text-sm text-[#8b4513] hover:underline">
-                                                        ดูรายละเอียดเพิ่มเติม →
-                                                    </Link>
-                                                </div>
-                                            ))
+                                                ))
                                         )}
                                     </div>
                                 </>

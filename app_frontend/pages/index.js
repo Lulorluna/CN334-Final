@@ -2,7 +2,8 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 
 function isTokenExpired(token) {
   try {
@@ -15,6 +16,9 @@ function isTokenExpired(token) {
 
 export default function HomePage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const router = useRouter();
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
     function checkAuth() {
@@ -30,6 +34,23 @@ export default function HomePage() {
     const interval = setInterval(checkAuth, 60000);
     return () => clearInterval(interval);
   }, []);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('jwt_access');
+    setIsLoggedIn(false);
+    router.push('/login');
+  };
 
   const categories = [
     { label: 'Raw', icon: '/icons/raw.png', href: '/product-list?category=Raw' },
@@ -73,13 +94,35 @@ export default function HomePage() {
               );
             })}
           </nav>
-          <div className="flex gap-4">
+          <div className="flex gap-4 items-center">
             {isLoggedIn ? (
               <>
                 <Link href="/order" className="p-2 border border-[#8b4513] rounded-full hover:bg-[#f4d03f] transition-colors duration-200">🛒</Link>
-                <Link href="/myprofile" className="w-10 h-10 rounded-full overflow-hidden border hover:ring-2 ring-yellow-500 transition-all duration-200">
-                  <Image src="/icons/user.png" alt="Profile" width={40} height={40} />
-                </Link>
+                <div className="relative" ref={dropdownRef}>
+                  <button
+                    onClick={() => setDropdownOpen(!dropdownOpen)}
+                    className="w-10 h-10 rounded-full overflow-hidden border hover:ring-2 ring-yellow-500 transition-all duration-200"
+                  >
+                    <Image src="/icons/user.png" alt="Profile" width={40} height={40} />
+                  </button>
+                  {dropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-40 bg-white border rounded-md shadow-lg z-50">
+                      <Link
+                        href="/myprofile"
+                        className="block px-4 py-2 text-gray-700 hover:bg-gray-100"
+                        onClick={() => setDropdownOpen(false)}
+                      >
+                        Profile
+                      </Link>
+                      <button
+                        onClick={handleLogout}
+                        className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
+                      >
+                        Logout
+                      </button>
+                    </div>
+                  )}
+                </div>
               </>
             ) : (
               <Link

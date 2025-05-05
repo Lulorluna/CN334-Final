@@ -182,7 +182,7 @@ class ConfirmOrderView(APIView):
 
         order.save()
 
-        order.status = Order.STATUS_PENDING
+        order.status = Order.STATUS_PROCESSING
         order.save()
 
         for po in ProductOrder.objects.filter(order=order):
