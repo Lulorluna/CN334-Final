@@ -35,7 +35,6 @@ export default function HomePage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Close dropdown on outside click
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
