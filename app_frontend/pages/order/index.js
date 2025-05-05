@@ -147,7 +147,6 @@ export default function OrderSummaryPage() {
                 if (al.length) setSelectedAddressId(al[0].id);
                 if (pl.length) setSelectedPaymentId(pl[0].id);
                 if (sl.length) setSelectedShippingId(sl[0].id);
-                // ——————————————————————————
             } catch (e) {
                 console.error(e);
             }

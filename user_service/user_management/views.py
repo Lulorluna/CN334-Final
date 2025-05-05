@@ -35,12 +35,30 @@ def register(request):
 class CustomerView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, format=None):
-        customer_data = Customer.objects.get(user=request.user)
-        customer_serializer = CustomerSerializer(customer_data)
-        content = {"data": customer_serializer.data}
+    def get_object(self, user):
+        return Customer.objects.filter(user=user).first()
 
-        return Response(content)
+    def get(self, request, format=None):
+        customer = self.get_object(request.user)
+        if not customer:
+            return Response(status=404)
+        serializer = CustomerSerializer(customer)
+        return Response({"data": serializer.data})
+
+    def put(self, request, format=None):
+        customer = self.get_object(request.user)
+        if not customer:
+            return Response(status=404)
+        serializer = CustomerSerializer(
+            customer,
+            data=request.data,
+            partial=True,
+            context={"request": request},
+        )
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"data": serializer.data})
+        return Response(serializer.errors, status=400)
 
 
 class UserView(APIView):
