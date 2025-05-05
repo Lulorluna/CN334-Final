@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.db.models import Q, UniqueConstraint
 
 
 # Create your models here.
@@ -37,6 +38,15 @@ class Address(models.Model):
     province = models.CharField(max_length=100)
     post_code = models.CharField(max_length=5)
     is_default = models.BooleanField(default=False)
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(
+                fields=["user"],
+                condition=Q(is_default=True),
+                name="unique_default_address_per_user",
+            )
+        ]
 
     def __str__(self):
         return f"{self.user.username} - {self.pk}"
