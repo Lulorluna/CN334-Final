@@ -18,7 +18,7 @@ class CustomerSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         user_data = validated_data.pop("user", None)
         if user_data:
-            user = instance
+            user = instance.user
             if user.username != user_data.get("username", user.username):
                 user.username = user_data.get("username", user.username)
             user.email = user_data.get("email", user.email)

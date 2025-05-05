@@ -46,13 +46,15 @@ export default function ProfilePage() {
 
     useEffect(() => {
         async function fetchProfile() {
-            const token = localStorage.getItem('jwt_access')
+            const token = localStorage.getItem('jwt_access');
+            if (!token || isTokenExpired(token)) return;
+
             try {
                 const res = await fetch('http://127.0.0.1:3342/api/myinfo/', {
                     headers: { Authorization: `Bearer ${token}` }
-                })
-                if (!res.ok) throw new Error()
-                const { data } = await res.json()
+                });
+                if (!res.ok) throw new Error();
+                const { data } = await res.json();
                 setFormData({
                     username: data.user.username,
                     email: data.user.email,
@@ -64,13 +66,18 @@ export default function ProfilePage() {
                             ? 'Female'
                             : 'Other',
                     tel: data.tel,
-                })
+                });
+            } catch (error) {
+                console.error('Error fetching profile:', error);
             } finally {
-                setLoading(false)
+                setLoading(false);
             }
         }
-        fetchProfile()
-    }, [])
+
+        if (isLoggedIn) {
+            fetchProfile();
+        }
+    }, [isLoggedIn]);
 
     const handleChange = e => {
         const { name, value } = e.target
