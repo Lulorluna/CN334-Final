@@ -76,7 +76,7 @@ export default function ProfilePage() {
     const handleLogout = () => {
         localStorage.removeItem('jwt_access');
         setIsLoggedIn(false);
-        router.push('/login');
+        router.push('/');
     };
 
     useEffect(() => {

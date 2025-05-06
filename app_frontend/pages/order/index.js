@@ -88,7 +88,7 @@ export default function OrderSummaryPage() {
     const handleLogout = () => {
         localStorage.removeItem('jwt_access');
         setIsLoggedIn(false);
-        router.push('/login');
+        router.push('/');
     };
 
     useEffect(() => {

@@ -70,7 +70,7 @@ export default function ProductDetailPage() {
     const handleLogout = () => {
         localStorage.removeItem('jwt_access');
         setIsLoggedIn(false);
-        router.push('/login');
+        router.push('/');
     };
 
     const handleConfirm = async () => {

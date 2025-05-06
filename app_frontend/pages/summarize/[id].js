@@ -108,7 +108,7 @@ export default function SummarizePage() {
     const handleLogout = () => {
         localStorage.removeItem('jwt_access');
         setIsLoggedIn(false);
-        router.push('/login');
+        router.push('/');
     };
 
     if (loading) return (

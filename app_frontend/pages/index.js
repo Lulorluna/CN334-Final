@@ -48,7 +48,7 @@ export default function HomePage() {
   const handleLogout = () => {
     localStorage.removeItem('jwt_access');
     setIsLoggedIn(false);
-    router.push('/login');
+    router.push('/');
   };
 
   const categories = [
