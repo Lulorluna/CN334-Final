@@ -11,33 +11,33 @@ class CustomerModelTest(TestCase):
     def test_create_customer_normal(self):
         """[Normal] Customer created correctly"""
         user = User.objects.get(username="C1")
-        cust = Customer(
+        customer = Customer(
             user=user, fullname="Name", date_of_birth="2000-01-01", sex="M", tel="08123"
         )
-        cust.save()
+        customer.save()
         self.assertEqual(str(cust), "C1")
 
     def test_invalid_tel(self):
         """[Invalid Input] non-numeric tel raises ValidationError"""
         with self.assertRaises(ValidationError):
-            cust = Customer(
+            customer = Customer(
                 user=User.objects.get(username="C1"),
                 fullname="N",
                 date_of_birth="2000-01-01",
                 sex="M",
                 tel="abc",
             )
-            cust.full_clean()
+            customer.full_clean()
 
     def test_xss_fullname(self):
         """[Attack] XSS in fullname sanitized"""
         user = User.objects.get(username="C1")
-        bad = "<script>"
-        cust = Customer(
-            user=user, fullname=bad, date_of_birth="2000-01-01", sex="", tel="08123"
+        error = "<script>"
+        customer = Customer(
+            user=user, fullname=error, date_of_birth="2000-01-01", sex="", tel="08123"
         )
-        cust.save()
-        self.assertNotIn("<script>", cust.fullname)
+        customer.save()
+        self.assertNotIn("<script>", customer.fullname)
 
 
 class AddressModelTest(TestCase):

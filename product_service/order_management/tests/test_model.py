@@ -1,6 +1,6 @@
 from django.test import TestCase
 from django.contrib.auth.models import User
-from order_management.models import Shipping, Order, ProductOrder, Payment
+from order_management.models import *
 from product_management.models import Product
 from datetime import date
 from django.core.exceptions import ValidationError
