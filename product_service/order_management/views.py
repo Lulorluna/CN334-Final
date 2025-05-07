@@ -64,7 +64,10 @@ class AddToCartView(APIView):
 
     def post(self, request, format=None):
         product_id = request.data.get("product_id")
-        quantity = int(request.data.get("quantity", 1))
+        try:
+            quantity = int(request.data.get("quantity", 1))
+        except (ValueError, TypeError):
+            return Response({"error": "Quantity must be a number."}, status=400)
 
         product = get_object_or_404(Product, pk=product_id)
 

@@ -30,7 +30,7 @@ def register(request):
         return JsonResponse({"error": "username already used."}, status=400)
 
     new_user.save()
-    data["user"] = new_user.id
+    data["user_id"] = new_user.id
     customer_serializer = CustomerSerializer(data=data)
     if customer_serializer.is_valid():
         customer_serializer.save()

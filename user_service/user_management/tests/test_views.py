@@ -1,12 +1,11 @@
 from rest_framework.test import APITestCase, APIClient
 from django.urls import reverse
 from django.contrib.auth.models import User
-from user_management.models import Customer, Address, UserPaymentMethod
+from user_management.models import *
 
 
 class CustomerViewTest(APITestCase):
     def setUp(self):
-        # สร้าง user + customer profile
         self.user = User.objects.create_user(username="cv", password="pass")
         Customer.objects.create(
             user=self.user,
@@ -15,7 +14,6 @@ class CustomerViewTest(APITestCase):
             sex="M",
             tel="08123",
         )
-        # บังคับให้ client ใช้สิทธิ์ user นี้
         self.client = APIClient()
         self.client.force_authenticate(user=self.user)
 

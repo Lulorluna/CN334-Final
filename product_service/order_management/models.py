@@ -4,6 +4,7 @@ from django.core.validators import MinValueValidator
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.contrib.auth.models import User
+from django.utils.html import strip_tags
 
 
 # Create your models here.
@@ -43,7 +44,7 @@ class Order(models.Model):
         default=0,
     )
     status = models.CharField(
-        max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING
+        max_length=100, choices=STATUS_CHOICES, default=STATUS_PENDING
     )
     create_at = models.DateTimeField(auto_now_add=True)
     update_at = models.DateTimeField(auto_now=True)
@@ -51,6 +52,10 @@ class Order(models.Model):
     @property
     def calculated_total(self):
         return sum(item.total_price for item in self.items.all())
+
+    def save(self, *args, **kwargs):
+        self.status = strip_tags(self.status)  # ลบ tag HTML เช่น <script>
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Order: {self.pk} - {self.customer_id}"
@@ -66,7 +71,6 @@ class ProductOrder(models.Model):
         return self.product.price * self.quantity
 
     def save(self, *args, **kwargs):
-        # เช็คว่า order เป็นตะกร้า
         if self.order.status == Order.STATUS_CART:
             existing = (
                 ProductOrder.objects.filter(order=self.order, product=self.product)
