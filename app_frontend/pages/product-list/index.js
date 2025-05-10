@@ -2,7 +2,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { getProductUrl } from '@/baseurl';
 
 function isTokenExpired(token) {
     try {
@@ -71,7 +70,7 @@ export default function ProductListPage() {
     useEffect(() => {
         async function fetchProducts() {
             try {
-                const res = await fetch(`${getProductUrl()}/api/product/all/`);
+                const res = await fetch('http://127.0.0.1:3341/api/product/all/');
                 const json = await res.json();
                 const available = json.data.filter(item => item.available);
                 setProducts(available);

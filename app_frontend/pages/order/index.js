@@ -4,7 +4,6 @@ import { useEffect, useState, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { getUserUrl, getProductUrl } from '@/baseurl';
 
 function isTokenExpired(token) {
     try {
@@ -97,7 +96,7 @@ export default function OrderSummaryPage() {
         (async () => {
             try {
                 const token = localStorage.getItem('jwt_access');
-                const res = await fetch(`${getProductUrl()}/api/cart/`, {
+                const res = await fetch('http://127.0.0.1:3341/api/cart/', {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 const { cart_orders } = await res.json();
@@ -124,7 +123,7 @@ export default function OrderSummaryPage() {
             try {
                 const details = await Promise.all(
                     cart.map(({ id }) =>
-                        fetch(`${getProductUrl()}/api/product/${id}/`)
+                        fetch(`http://127.0.0.1:3341/api/product/${id}/`)
                             .then(r => r.json())
                             .then(json => json)
                     )
@@ -150,9 +149,9 @@ export default function OrderSummaryPage() {
                 const token = localStorage.getItem('jwt_access');
                 const headers = { Authorization: `Bearer ${token}` };
                 const [ar, pr, sr] = await Promise.all([
-                    fetch(`${getUserUrl()}/api/address/`, { headers }),
-                    fetch(`${getUserUrl()}/api/payment/`, { headers }),
-                    fetch(`${getProductUrl()}/api/shipping/`, { headers }),
+                    fetch('http://127.0.0.1:3342/api/address/', { headers }),
+                    fetch('http://127.0.0.1:3342/api/payment/', { headers }),
+                    fetch('http://127.0.0.1:3341/api/shipping/', { headers }),
                 ]);
                 const { data: al = [] } = await ar.json();
                 const { data: pl = [] } = await pr.json();
@@ -175,7 +174,7 @@ export default function OrderSummaryPage() {
     const removeFromBackendCart = async (productId) => {
         try {
             const token = localStorage.getItem('jwt_access');
-            const res = await fetch(`${getProductUrl()}/api/cart/remove/${productId}/`, {
+            const res = await fetch(`http://127.0.0.1:3341/api/cart/remove/${productId}/`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -188,7 +187,7 @@ export default function OrderSummaryPage() {
     const updateBackendCart = async (productId, quantity) => {
         try {
             const token = localStorage.getItem('jwt_access');
-            await fetch(`${getProductUrl()}/api/cart/update/${productId}/`, {
+            await fetch(`http://127.0.0.1:3341/api/cart/update/${productId}/`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
@@ -229,7 +228,7 @@ export default function OrderSummaryPage() {
         }
         try {
             const token = localStorage.getItem('jwt_access');
-            const res = await fetch(`${getProductUrl()}/api/order/confirm/`, {
+            const res = await fetch('http://127.0.0.1:3341/api/order/confirm/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

@@ -3,7 +3,6 @@ import { useRouter } from 'next/router';
 import axios from 'axios';
 import Link from 'next/link';
 import Image from 'next/image';
-import { getUserUrl } from '@/baseurl';
 
 export default function RegisterPage() {
     const [username, setUsername] = useState('');
@@ -21,7 +20,7 @@ export default function RegisterPage() {
         setError(null);
         const data = { username, password, email, fullname, date_of_birth: dateOfBirth, sex, tel };
         try {
-            await axios.post(`${getUserUrl()}/api/register/`, data);
+            await axios.post('http://127.0.0.1:3342/api/register/', data);
             router.push('/login');
         } catch (err) {
             setError(err.response?.data?.error || 'Something went wrong.');

@@ -2,8 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router'
 import Link from 'next/link';
 import Image from 'next/image';
-import { getUserUrl, getProductUrl } from '@/baseurl';
-
 
 function isTokenExpired(token) {
     try {
@@ -84,7 +82,7 @@ export default function ProfilePage() {
     useEffect(() => {
         if (isLoggedIn && activeTab === 'history') {
             const token = localStorage.getItem('jwt_access');
-            fetch(`${getProductUrl()}/api/history/`, {
+            fetch('http://127.0.0.1:3341/api/history/', {
                 headers: { Authorization: `Bearer ${token}` }
             })
                 .then(res => res.json())
@@ -118,7 +116,7 @@ export default function ProfilePage() {
             if (!token || isTokenExpired(token)) return;
 
             try {
-                const res = await fetch(`${getUserUrl()}/api/myinfo/`, {
+                const res = await fetch('http://127.0.0.1:3342/api/myinfo/', {
                     headers: { Authorization: `Bearer ${token}` }
                 })
                 if (!res.ok) throw new Error()
@@ -192,7 +190,7 @@ export default function ProfilePage() {
         }
 
         try {
-            const res = await fetch(`${getUserUrl()}/api/myinfo/`, {
+            const res = await fetch('http://127.0.0.1:3342/api/myinfo/', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

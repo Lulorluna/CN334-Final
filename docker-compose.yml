@@ -3,12 +3,17 @@ services:
     image: postgres:15
     volumes:
       - ./data/db:/var/lib/postgresql/data
-    environment:
-      - POSTGRES_DB=postgres
-      - POSTGRES_USER=cn334Admin
-      - POSTGRES_PASSWORD=cn334Admin
+    env_file: # <--- เพิ่มส่วนนี้เข้ามา
+      - ./.env # ระบุให้ service นี้โหลด Environment Variables จากไฟล์ .env
+              # Docker Compose จะมองหาตัวแปรที่เกี่ยวข้องกับ Postgres ที่ db image รู้จัก
+              # เช่น POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD จากไฟล์ .env
+              # หากชื่อใน .env ของคุณคือ POSTGRES_DB_ENV, POSTGRES_USER_ENV, POSTGRES_PASSWORD_ENV
+              # และ image 'postgres:15' คาดหวังชื่อ POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD
+              # คุณอาจจะต้องมีส่วน environment: เพื่อ map ชื่อ หรือเปลี่ยนชื่อใน .env ให้ตรงกัน
+              # เพื่อความง่าย ผมแนะนำให้ชื่อใน .env ตรงกับที่ image/application คาดหวัง
     ports:
       - "5432:5432"
+
   product_api:
     build: ./product_service
     command: python manage.py runserver 0.0.0.0:8888
@@ -16,12 +21,23 @@ services:
       - ./product_service:/code
     ports:
       - "3341:8888"
-    environment:
-      - POSTGRES_NAME=postgres
-      - POSTGRES_USER=cn334Admin
-      - POSTGRES_PASSWORD=cn334Admin
+    env_file: # <--- เพิ่มส่วนนี้เข้ามา
+      - ./.env # โหลดตัวแปรทั้งหมดจาก .env เข้าไปใน environment ของ service นี้โดยตรง
+              # หากชื่อตัวแปรใน .env ตรงกับที่ Django settings.py คาดหวัง
+              # (เช่น EMAIL_HOST_USER, POSTGRES_NAME) คุณก็ไม่จำเป็นต้องมีส่วน environment: ด้านล่างอีก
+              # สำหรับการ map ชื่ออีกต่อไป
+    # environment: # <--- ส่วนนี้อาจจะไม่จำเป็นแล้ว ถ้าชื่อใน .env ตรงกับที่ settings.py ใช้
+    #   # Database settings
+    #   - POSTGRES_NAME=${POSTGRES_DB_ENV} # ถ้าใน .env คือ POSTGRES_DB และ settings.py ใช้ POSTGRES_DB ก็ไม่ต้อง map
+    #   - POSTGRES_USER=${POSTGRES_USER_ENV}
+    #   - POSTGRES_PASSWORD=${POSTGRES_PASSWORD_ENV}
+    #   # Email settings
+    #   - EMAIL_BACKEND=${PROD_EMAIL_BACKEND}
+    #   - EMAIL_HOST=${PROD_EMAIL_HOST}
+    #   # ... (อื่นๆ)
     depends_on:
       - db
+
   user_api:
     build: ./user_service
     command: python manage.py runserver 0.0.0.0:8888
@@ -29,12 +45,15 @@ services:
       - ./user_service:/code
     ports:
       - "3342:8888"
-    environment:
-      - POSTGRES_NAME=postgres
-      - POSTGRES_USER=cn334Admin
-      - POSTGRES_PASSWORD=cn334Admin
+    env_file: # <--- เพิ่มส่วนนี้เข้ามา
+      - ./.env
+    # environment: # <--- ส่วนนี้อาจจะไม่จำเป็นแล้ว ถ้าชื่อใน .env ตรงกับที่ settings.py ใช้
+    #   - POSTGRES_NAME=${POSTGRES_DB_ENV}
+    #   - POSTGRES_USER=${POSTGRES_USER_ENV}
+    #   - POSTGRES_PASSWORD=${POSTGRES_PASSWORD_ENV}
     depends_on:
       - db
+
   front_end:
     build: ./app_frontend
     command: npm run dev
