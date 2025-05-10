@@ -26,6 +26,7 @@ export default function ProductDetailPage() {
     const [error, setError] = useState(null);
     const [quantity, setQuantity] = useState(1);
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [cartCount, setCartCount] = useState(0)
     const dropdownRef = useRef(null);
 
     useEffect(() => {
@@ -42,6 +43,17 @@ export default function ProductDetailPage() {
         const interval = setInterval(checkAuth, 60000);
         return () => clearInterval(interval);
     }, []);
+
+    useEffect(() => {
+        function updateCount() {
+            const stored = JSON.parse(localStorage.getItem('cart') || '[]')
+            const total = stored.reduce((sum, i) => sum + (i.quantity || 0), 0)
+            setCartCount(total)
+        }
+        updateCount()
+        window.addEventListener('storage', updateCount)
+        return () => window.removeEventListener('storage', updateCount)
+    }, [])
 
     useEffect(() => {
         if (!id) return;
@@ -92,6 +104,14 @@ export default function ProductDetailPage() {
                         },
                     }
                 );
+                const prev = JSON.parse(localStorage.getItem('cart') || '[]')
+                const idx = prev.findIndex(i => i.id === product.id)
+                if (idx >= 0) {
+                    prev[idx].quantity += quantity
+                } else {
+                    prev.push({ id: product.id, quantity })
+                }
+                localStorage.setItem('cart', JSON.stringify(prev))
                 alert('เพิ่มสินค้าลงตะกร้าเรียบร้อยแล้ว');
             } catch (err) {
                 alert('ไม่สามารถเพิ่มสินค้าได้');
@@ -135,7 +155,17 @@ export default function ProductDetailPage() {
                     <div className="flex gap-4 items-center">
                         {isLoggedIn ? (
                             <>
-                                <Link href="/order" className="p-2 border border-[#8b4513] rounded-full hover:bg-[#f4d03f] transition-colors duration-200">🛒</Link>
+                                <Link
+                                    href="/order"
+                                    className="relative p-2 border rounded-full hover:bg-[#f4d03f]"
+                                >
+                                    🛒
+                                    {cartCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
+                                            {cartCount}
+                                        </span>
+                                    )}
+                                </Link>
                                 <div className="relative" ref={dropdownRef}>
                                     <button
                                         onClick={() => setDropdownOpen(!dropdownOpen)}

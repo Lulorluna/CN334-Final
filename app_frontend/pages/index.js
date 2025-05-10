@@ -16,6 +16,7 @@ function isTokenExpired(token) {
 
 export default function HomePage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const router = useRouter();
   const dropdownRef = useRef(null);
@@ -34,6 +35,18 @@ export default function HomePage() {
     const interval = setInterval(checkAuth, 60000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    function updateCount() {
+      const stored = JSON.parse(localStorage.getItem('cart') || '[]');
+      const total = stored.reduce((sum, item) => sum + (item.quantity || 0), 0);
+      setCartCount(total);
+    }
+    updateCount();
+    window.addEventListener('storage', updateCount);
+    return () => window.removeEventListener('storage', updateCount);
+  }, []);
+
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -96,7 +109,17 @@ export default function HomePage() {
           <div className="flex gap-4 items-center">
             {isLoggedIn ? (
               <>
-                <Link href="/order" className="p-2 border border-[#8b4513] rounded-full hover:bg-[#f4d03f] transition-colors duration-200">🛒</Link>
+                <Link
+                  href="/order"
+                  className="relative p-2 border border-[#8b4513] rounded-full hover:bg-[#f4d03f] transition-colors duration-200"
+                >
+                  🛒
+                  {cartCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
+                      {cartCount}
+                    </span>
+                  )}
+                </Link>
                 <div className="relative" ref={dropdownRef}>
                   <button
                     onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -108,7 +131,7 @@ export default function HomePage() {
                     <div className="absolute right-0 mt-2 w-40 bg-white border rounded-md shadow-lg z-50">
                       <Link
                         href="/myprofile"
-                        className="block px-4 py-2 text-gray-700 hover:bg-gray-100"
+                        className="block px-4 py-2 text-yellow-700 hover:bg-gray-100"
                         onClick={() => setDropdownOpen(false)}
                       >
                         Profile

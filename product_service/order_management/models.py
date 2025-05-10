@@ -32,6 +32,21 @@ class Order(models.Model):
         (STATUS_IN_TRANSIT, "กำลังจัดส่ง"),
         (STATUS_SHIPPED, "จัดส่งแล้ว"),
     ]
+    PAYMENT_CREDIT = "credit_card"
+    PAYMENT_COD = "cash_on_delivery"
+    PAYMENT_QR = "qr_code"
+    PAYMENT_CHOICES = [
+        (PAYMENT_CREDIT, "บัตรเครดิต/เดบิต"),
+        (PAYMENT_COD, "เก็บเงินปลายทาง"),
+        (PAYMENT_QR, "สแกน QR Code"),
+    ]
+
+    payment_method = models.CharField(
+        max_length=20,
+        choices=PAYMENT_CHOICES,
+        default=PAYMENT_COD,
+    )
+
     customer = models.ForeignKey(User, on_delete=models.CASCADE, default=1)
     shipping = models.ForeignKey(Shipping, on_delete=models.SET_NULL, null=True)
     shipping_address_id = models.IntegerField(null=True, blank=True)

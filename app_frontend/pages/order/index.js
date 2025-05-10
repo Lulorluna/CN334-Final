@@ -29,11 +29,14 @@ export default function OrderSummaryPage() {
     const [payments, setPayments] = useState([]);
     const [shippings, setShippings] = useState([]);
     const [selectedShippingId, setSelectedShippingId] = useState(null);
+    const [paymentMethod, setPaymentMethod] = useState('credit_card');
+    const [qrVerified, setQrVerified] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [accepted, setAccepted] = useState(false);
     const [selectedAddressId, setSelectedAddressId] = useState(null);
     const [selectedPaymentId, setSelectedPaymentId] = useState(null);
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [cartCount, setCartCount] = useState(0);
     const dropdownRef = useRef(null);
 
     useEffect(() => {
@@ -75,6 +78,12 @@ export default function OrderSummaryPage() {
         const id = setInterval(checkAuth, 60000);
         return () => clearInterval(id);
     }, [router]);
+
+    useEffect(() => {
+        const total = cart.reduce((sum, i) => sum + (i.quantity || 0), 0);
+        setCartCount(total);
+        localStorage.setItem('cart', JSON.stringify(cart));
+    }, [cart]);
 
     useEffect(() => {
         function handleClickOutside(event) {
@@ -213,7 +222,6 @@ export default function OrderSummaryPage() {
                 ? cart.map(i => i.id === id ? { ...i, quantity: newQty } : i)
                 : cart.filter(i => i.id !== id);
             setCart(updated);
-            localStorage.setItem('cart', JSON.stringify(updated));
         } catch (err) {
             console.error('Failed to update quantity:', err);
         }
@@ -222,39 +230,55 @@ export default function OrderSummaryPage() {
     const subtotal = fullProducts.reduce((sum, p) => sum + p.price * p.quantity, 0);
     const shipFee = shippings.find(s => s.id === Number(selectedShippingId))?.fee || 0;
 
+    const canConfirm = accepted && (
+        paymentMethod !== 'qr_code'
+        || (paymentMethod === 'qr_code' && qrVerified)
+    );
+
+    const handleVerifyQR = () => {
+        setQrVerified(true);
+    };
+
     const handleConfirm = async () => {
-        if (!selectedAddressId || !selectedPaymentId || !selectedShippingId) {
-            alert('กรุณาเลือกที่อยู่ วิธีจัดส่ง และวิธีชำระเงิน');
+        if (!selectedAddressId || !selectedShippingId) {
+            alert("กรุณาเลือกที่อยู่ และวิธีจัดส่ง");
             return;
         }
+        if (paymentMethod === "credit_card" && !selectedPaymentId) {
+            alert("กรุณาเลือกบัตรเครดิต/เดบิต");
+            return;
+        }
+        if (paymentMethod === "qr_code" && !qrVerified) {
+            alert("กรุณาตรวจสอบการชำระเงินก่อน");
+            return;
+        }
+
         try {
-            const token = localStorage.getItem('jwt_access');
+            const token = localStorage.getItem("jwt_access");
             const res = await fetch(`${getProductUrl()}/api/order/confirm/`, {
-                method: 'POST',
+                method: "POST",
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify({
                     address_id: selectedAddressId,
-                    payment_id: selectedPaymentId,
-                    shipping_id: selectedShippingId
+                    shipping_id: selectedShippingId,
+                    payment_method: paymentMethod,
+                    user_payment_method_id:
+                        paymentMethod === "credit_card" ? selectedPaymentId : null,
                 }),
             });
 
             const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Confirm failed');
+            if (!res.ok) throw new Error(data.error || "Confirm failed");
 
-            const orderId = data.order_id;
-            alert('ยืนยันเรียบร้อย');
-
-            localStorage.removeItem('cart');
-            setCart([]);
-
-            router.push(`/summarize/${orderId}`);
+            alert("ยืนยันเรียบร้อย");
+            localStorage.removeItem("cart");
+            router.push(`/summarize/${data.order_id}`);
         } catch (err) {
             console.error(err);
-            alert('ยืนยันคำสั่งซื้อไม่สำเร็จ: ' + err.message);
+            alert("ยืนยันคำสั่งซื้อไม่สำเร็จ: " + err.message);
         }
     };
 
@@ -290,7 +314,17 @@ export default function OrderSummaryPage() {
                     <div className="flex gap-4 items-center">
                         {isLoggedIn ? (
                             <>
-                                <Link href="/order" className="p-2 border border-[#8b4513] rounded-full hover:bg-[#f4d03f] transition-colors duration-200">🛒</Link>
+                                <Link
+                                    href="/order"
+                                    className="relative p-2 border border-[#8b4513] rounded-full hover:bg-[#f4d03f] transition-colors duration-200"
+                                >
+                                    🛒
+                                    {cartCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
+                                            {cartCount}
+                                        </span>
+                                    )}
+                                </Link>
                                 <div className="relative" ref={dropdownRef}>
                                     <button
                                         onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -373,17 +407,18 @@ export default function OrderSummaryPage() {
                                     type="checkbox"
                                     className="text-yellow-500"
                                     checked={accepted}
-                                    onChange={(e) => setAccepted(e.target.checked)}
+                                    onChange={e => setAccepted(e.target.checked)}
                                 />
                                 ยอมรับเงื่อนไข
                             </label>
                             <button
                                 onClick={handleConfirm}
-                                disabled={!accepted}
+                                disabled={!canConfirm}
                                 className={`mt-6 w-full py-3 rounded-lg font-bold transition 
-                                ${accepted
+                                    ${canConfirm
                                         ? 'bg-green-500 hover:bg-green-600 text-white'
-                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    }`}
                             >
                                 ยืนยันการสั่งซื้อ
                             </button>
@@ -426,17 +461,56 @@ export default function OrderSummaryPage() {
                     <div className="mb-4">
                         <label className="block font-medium mb-1">วิธีชำระเงิน</label>
                         <select
-                            value={selectedPaymentId || ''}
-                            onChange={e => setSelectedPaymentId(Number(e.target.value))}
+                            value={paymentMethod}
+                            onChange={e => {
+                                setPaymentMethod(e.target.value);
+                                setQrVerified(false);
+                            }}
                             className="w-full border rounded px-3 py-2"
                         >
-                            {payments.map(p => (
-                                <option key={p.id} value={p.id}>
-                                    **** **** **** {p.card_no.slice(-4)}
-                                </option>
-                            ))}
+                            <option value="credit_card">บัตรเครดิต/เดบิต</option>
+                            <option value="cash_on_delivery">เก็บเงินปลายทาง (COD)</option>
+                            <option value="qr_code">สแกน QR Code</option>
                         </select>
                     </div>
+
+                    {paymentMethod === "credit_card" && (
+                        <div className="mb-4">
+                            <label className="block font-medium mb-1">เลือกบัตร</label>
+                            <select
+                                value={selectedPaymentId || ""}
+                                onChange={e => setSelectedPaymentId(Number(e.target.value))}
+                                className="w-full border rounded px-3 py-2"
+                            >
+                                {payments.map(p => (
+                                    <option key={p.id} value={p.id}>
+                                        **** **** **** {p.card_no.slice(-4)}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+                    {paymentMethod === 'qr_code' && (
+                        <div className="mb-6 flex flex-col items-center">
+                            <Image
+                                src="/images/placeholder-qr.png"
+                                alt="QR Code"
+                                width={200}
+                                height={200}
+                            />
+                            <button
+                                onClick={handleVerifyQR}
+                                disabled={qrVerified}
+                                className={`mt-4 px-4 py-2 rounded-lg font-medium transition
+                                    ${qrVerified
+                                        ? 'bg-green-200 text-green-800 cursor-default'
+                                        : 'bg-blue-500 hover:bg-blue-600 text-white'
+                                    }`}
+                            >
+                                {qrVerified ? '✓ ชำระเงินเรียบร้อย' : 'ตรวจสอบการชำระเงิน'}
+                            </button>
+                        </div>
+                    )}
                 </div>
             </main>
             <footer className="bg-gray-100 py-6">

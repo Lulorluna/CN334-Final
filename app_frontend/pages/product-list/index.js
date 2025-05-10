@@ -17,6 +17,10 @@ export default function ProductListPage() {
     const searchParams = useSearchParams();
     const initialCategory = searchParams.get('category');
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [products, setProducts] = useState([]);
+    const [selectedCategory, setSelectedCategory] = useState(initialCategory || null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [cartCount, setCartCount] = useState(0)
     const dropdownRef = useRef(null);
 
     const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -35,9 +39,16 @@ export default function ProductListPage() {
         return () => clearInterval(interval);
     }, []);
 
-    const [products, setProducts] = useState([]);
-    const [selectedCategory, setSelectedCategory] = useState(initialCategory || null);
-    const [searchTerm, setSearchTerm] = useState('');
+    useEffect(() => {
+        function updateCount() {
+            const stored = JSON.parse(localStorage.getItem('cart') || '[]')
+            const total = stored.reduce((sum, i) => sum + (i.quantity || 0), 0)
+            setCartCount(total)
+        }
+        updateCount()
+        window.addEventListener('storage', updateCount)
+        return () => window.removeEventListener('storage', updateCount)
+    }, [])
 
     useEffect(() => {
         function handleClickOutside(event) {
@@ -128,7 +139,17 @@ export default function ProductListPage() {
                     <div className="flex gap-4 items-center">
                         {isLoggedIn ? (
                             <>
-                                <Link href="/order" className="p-2 border border-[#8b4513] rounded-full hover:bg-[#f4d03f] transition-colors duration-200">🛒</Link>
+                                <Link
+                                    href="/order"
+                                    className="relative p-2 border rounded-full hover:bg-[#f4d03f]"
+                                >
+                                    🛒
+                                    {cartCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
+                                            {cartCount}
+                                        </span>
+                                    )}
+                                </Link>
                                 <div className="relative" ref={dropdownRef}>
                                     <button
                                         onClick={() => setDropdownOpen(!dropdownOpen)}
