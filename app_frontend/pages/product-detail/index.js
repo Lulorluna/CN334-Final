@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import axios from 'axios';
+import { getProductUrl } from '@/baseurl';
 
 function isTokenExpired(token) {
     try {
@@ -46,7 +47,7 @@ export default function ProductDetailPage() {
         if (!id) return;
         async function fetchProduct() {
             try {
-                const response = await axios.get(`http://127.0.0.1:3341/api/product/${id}/`);
+                const response = await axios.get(`${getProductUrl()}/api/product/${id}/`);
                 setProduct(response.data.data);
                 setLoading(false);
             } catch (err) {
@@ -80,7 +81,7 @@ export default function ProductDetailPage() {
             try {
                 const token = localStorage.getItem('jwt_access');
                 await axios.post(
-                    'http://127.0.0.1:3341/api/cart/add/',
+                    `${getProductUrl()}/api/cart/add/`,
                     {
                         product_id: product.id,
                         quantity: quantity,
