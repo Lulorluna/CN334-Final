@@ -181,7 +181,7 @@ export default function OrderSummaryPage() {
         })();
     }, []);
 
-    const removeFromBackendCart = async (productId) => {
+    const removeItemFromCart = async (productId) => {
         try {
             const token = localStorage.getItem('jwt_access');
             const res = await fetch(`${getProductUrl()}/api/cart/remove/${productId}/`, {
@@ -194,7 +194,7 @@ export default function OrderSummaryPage() {
         }
     };
 
-    const updateBackendCart = async (productId, quantity) => {
+    const updateCart = async (productId, quantity) => {
         try {
             const token = localStorage.getItem('jwt_access');
             await fetch(`${getProductUrl()}/api/cart/update/${productId}/`, {
@@ -213,9 +213,9 @@ export default function OrderSummaryPage() {
     const updateQty = async (id, newQty) => {
         try {
             if (newQty === 0) {
-                await removeFromBackendCart(id);
+                await removeItemFromCart(id);
             } else {
-                await updateBackendCart(id, newQty);
+                await updateCart(id, newQty);
             }
 
             const updated = newQty > 0
@@ -436,6 +436,7 @@ export default function OrderSummaryPage() {
                         <select
                             value={selectedAddressId || ''}
                             onChange={e => setSelectedAddressId(Number(e.target.value))}
+                            className="w-full border rounded px-3 py-2"
                         >
                             {addresses.map(a => (
                                 <option key={a.id} value={a.id}>
@@ -468,9 +469,9 @@ export default function OrderSummaryPage() {
                             }}
                             className="w-full border rounded px-3 py-2"
                         >
-                            <option value="credit_card">บัตรเครดิต/เดบิต</option>
                             <option value="cash_on_delivery">เก็บเงินปลายทาง (COD)</option>
                             <option value="qr_code">สแกน QR Code</option>
+                            <option value="credit_card">บัตรเครดิต/เดบิต</option>
                         </select>
                     </div>
 

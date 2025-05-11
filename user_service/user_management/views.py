@@ -90,6 +90,11 @@ class AddressListView(APIView):
         return Response({"data": serializer.data})
 
     def post(self, request, format=None):
+        if request.data.get("is_default"):
+            Address.objects.filter(user=request.user, is_default=True).exclude(
+                pk=request.data.get("id")
+            ).update(is_default=False)
+
         serializer = AddressSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(user=request.user)
@@ -114,6 +119,12 @@ class AddressDetailView(APIView):
         addr = self.get_object(pk, request.user)
         if not addr:
             return Response(status=404)
+
+        if request.data.get("is_default"):
+            Address.objects.filter(user=request.user, is_default=True).exclude(
+                pk=pk
+            ).update(is_default=False)
+
         serializer = AddressSerializer(addr, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()

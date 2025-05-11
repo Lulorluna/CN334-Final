@@ -16,25 +16,24 @@ function isTokenExpired(token) {
 
 export default function ProfilePage() {
     const router = useRouter()
-
     const [loading, setLoading] = useState(true)
-    const [editing, setEditing] = useState(false)
     const [activeTab, setActiveTab] = useState('account');
     const [formData, setFormData] = useState({
         account: {
             username: '',
             email: '',
             fullname: '',
-            dateOfBirth: '',
+            date_of_birth: '',
             sex: '',
-            telephone: ''
+            tel: '',
         },
         address: {
-            receiverName: '',
-            houseNumber: '',
+            receiver_name: '',
+            house_number: '',
             district: '',
             province: '',
-            postcode: ''
+            post_code: '',
+            is_default: false,
         },
         history: {
             customer: '',
@@ -47,12 +46,15 @@ export default function ProfilePage() {
             cardNo: '',
             expired: '',
             holderName: ''
-        },
+        }
     });
     const [errors, setErrors] = useState({})
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [backgroundImage, setBackgroundImage] = useState('/images/bg1.jpeg');
     const [historyList, setHistoryList] = useState([]);
+    const [addressList, setAddressList] = useState([]);
+    const [showNewAddressForm, setShowNewAddressForm] = useState(false);
+    const [defaultAddressId, setDefaultAddressId] = useState(null);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
 
@@ -136,11 +138,12 @@ export default function ProfilePage() {
                                 : 'Other',
                         tel: data.tel,
                     }, address: {
-                        receiverName: '',
-                        houseNumber: '',
+                        receiver_name: '',
+                        house_number: '',
                         district: '',
                         province: '',
-                        postcode: ''
+                        post_code: '',
+                        is_default: false
                     },
                     history: {
                         customer: '',
@@ -166,6 +169,21 @@ export default function ProfilePage() {
             fetchProfile();
         }
     }, [isLoggedIn]);
+
+    useEffect(() => {
+        if (isLoggedIn && activeTab === 'address') {
+            const token = localStorage.getItem('jwt_access');
+            fetch(`${getUserUrl()}/api/address/`, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+                .then(res => res.json())
+                .then(json => {
+                    setAddressList(json.data);
+                    const def = json.data.find(a => a.is_default);
+                    if (def) setDefaultAddressId(def.id);
+                });
+        }
+    }, [isLoggedIn, activeTab]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -202,6 +220,14 @@ export default function ProfilePage() {
             })
             const data = await res.json()
 
+            if (response.status === 401) {
+                alert("Session หมดอายุ กรุณาเข้าสู่ระบบใหม่");
+                localStorage.removeItem("jwt_access");
+                router.push("/login");
+                return;
+            }
+
+
             if (!res.ok) {
                 console.log('Validation errors from API:', data)
                 setErrors(data)
@@ -215,16 +241,88 @@ export default function ProfilePage() {
         alert("บันทึกข้อมูลเรียบร้อยแล้ว!");
     }
 
-    const handleBackgroundUpload = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setBackgroundImage(reader.result);
-            };
-            reader.readAsDataURL(file);
+    const handleDefaultChange = async (addrId) => {
+        const token = localStorage.getItem('jwt_access');
+        const res = await fetch(`${getUserUrl()}/api/address/${addrId}/`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ is_default: true }),
+        });
+
+        if (!res.ok) return console.error('Fail to set default');
+        setDefaultAddressId(addrId);
+        setAddressList(prev =>
+            prev.map(a => ({ ...a, is_default: a.id === addrId }))
+        );
+    };
+
+
+    const handleAddressSubmit = async (e) => {
+        e.preventDefault();
+        const token = localStorage.getItem('jwt_access');
+        const postCode = formData.address.post_code;
+
+        if (postCode.length > 5) {
+            alert("รหัสไปรษณีย์ต้องไม่เกิน 5 ตัวอักษร");
+            return;
+        }
+
+        const addressData = {
+            receiver_name: formData.address.receiver_name,
+            house_number: formData.address.house_number,
+            district: formData.address.district,
+            province: formData.address.province,
+            post_code: postCode,
+            is_default: formData.address.is_default,
+        };
+
+        try {
+            const response = await fetch(`${getUserUrl()}/api/address/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(addressData),
+            });
+
+            if (response.status === 401) {
+                alert("Session หมดอายุ กรุณาเข้าสู่ระบบใหม่");
+                localStorage.removeItem("jwt_access");
+                router.push("/login");
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error('Failed to submit address');
+            }
+
+            setFormData(prev => ({
+                ...prev,
+                address: {
+                    receiver_name: '',
+                    house_number: '',
+                    district: '',
+                    province: '',
+                    post_code: '',
+                    is_default: false,
+                },
+            }));
+
+            setShowNewAddressForm(false);
+            fetchAddressList();
+            const responseData = await response.json();
+            console.log('บันทึกที่อยู่สำเร็จ', responseData);
+            alert('บันทึกที่อยู่สำเร็จ')
+        } catch (error) {
+            console.error('Error submitting address:', error);
+            alert('บันทึกที่ไม่สำเร็จ')
         }
     };
+
 
     const navLinks = [
         { name: 'Account', href: '/profile', tab: 'account', active: activeTab === 'account' },
@@ -454,8 +552,93 @@ export default function ProfilePage() {
                             )}
 
                             {activeTab === 'address' && (
-                                <>
-                                </>
+                                <div>
+                                    {!showNewAddressForm ? (
+                                        <div className="space-y-3">
+                                            {addressList.map(addr => (
+                                                <label
+                                                    key={addr.id}
+                                                    className="flex items-center space-x-2 p-3 border border-[#8b4513]/50 rounded-lg bg-[#fdf6e3]"
+                                                >
+                                                    <input
+                                                        type="radio"
+                                                        name="defaultAddress"
+                                                        value={addr.id}
+                                                        checked={defaultAddressId === addr.id}
+                                                        onChange={() => handleDefaultChange(addr.id)}
+                                                        className="accent-[#8b4513]"
+                                                    />
+                                                    <div className="text-[#8b4513]">
+                                                        <p className="font-semibold">{addr.receiver_name}</p>
+                                                        <p className="text-sm">
+                                                            {addr.house_number}, {addr.district}, {addr.province} {addr.post_code}
+                                                        </p>
+                                                        {addr.is_default && <span className="text-xs text-green-700">Default</span>}
+                                                    </div>
+                                                </label>
+                                            ))}
+
+                                            <div className="text-left mt-4">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowNewAddressForm(true)}
+                                                    className="px-6 py-2 bg-[#f4d03f] text-[#8b4513] rounded-lg hover:bg-[#e6c02f] transition-colors duration-200 font-semibold"
+                                                >
+                                                    + Add Address
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4 p-4 mt-4 border border-[#8b4513]/50 rounded-lg bg-[#fdf6e3]">
+                                            {['receiver_name', 'house_number', 'district', 'province', 'post_code'].map(field => (
+                                                <div key={field}>
+                                                    <label className="block text-sm font-medium text-[#8b4513] mb-2 capitalize">
+                                                        {field.replace('_', ' ')} *
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        name={field}
+                                                        required
+                                                        value={formData.address[field]}
+                                                        onChange={handleChange}
+                                                        className="w-full p-3 border border-[#8b4513]/50 rounded-lg bg-white text-[#8b4513] focus:ring-[#f4d03f] focus:border-[#f4d03f]"
+                                                    />
+                                                </div>
+                                            ))}
+                                            <div className="flex items-center space-x-2">
+                                                <input
+                                                    type="checkbox"
+                                                    name="is_default"
+                                                    checked={formData.address.is_default || false}
+                                                    onChange={e =>
+                                                        setFormData(prev => ({
+                                                            ...prev,
+                                                            address: { ...prev.address, is_default: e.target.checked },
+                                                        }))
+                                                    }
+                                                    className="accent-[#8b4513]"
+                                                />
+                                                <label className="text-[#8b4513]">Set as default</label>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowNewAddressForm(false)}
+                                                    className="bg-[#f4d03f] text-[#8b4513] px-6 py-3 rounded-lg hover:bg-[#e6c02f] transition-colors duration-200 font-semibold"
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleAddressSubmit}
+                                                    className="bg-[#f4d03f] text-[#8b4513] px-6 py-3 rounded-lg hover:bg-[#e6c02f] transition-colors duration-200 font-semibold"
+                                                >
+                                                    Save Address
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             )}
 
                             {activeTab === 'history' && (
@@ -491,7 +674,6 @@ export default function ProfilePage() {
                                                         <Link href={`/summarize/${order.id}`}
                                                             className="inline-block mt-3 text-sm text-[#8b4513] hover:underline">
                                                             ดูรายละเอียดเพิ่มเติม →
-
                                                         </Link>
                                                     </div>
                                                 ))

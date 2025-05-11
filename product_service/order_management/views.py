@@ -49,7 +49,6 @@ class OrderDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, id, format=None):
-        # หาเฉพาะ order ของ user ที่ตรงกับ id
         try:
             order = Order.objects.get(pk=id, customer=request.user)
         except Order.DoesNotExist:

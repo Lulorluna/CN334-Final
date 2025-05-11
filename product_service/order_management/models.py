@@ -69,7 +69,7 @@ class Order(models.Model):
         return sum(item.total_price for item in self.items.all())
 
     def save(self, *args, **kwargs):
-        self.status = strip_tags(self.status)  # ลบ tag HTML เช่น <script>
+        self.status = strip_tags(self.status)
         super().save(*args, **kwargs)
 
     def __str__(self):
