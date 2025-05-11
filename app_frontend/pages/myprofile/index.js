@@ -43,9 +43,10 @@ export default function ProfilePage() {
         },
         payment: {
             method: '',
-            cardNo: '',
+            card_no: '',
             expired: '',
-            holderName: ''
+            holder_name: '',
+            is_default: false
         }
     });
     const [errors, setErrors] = useState({})
@@ -55,6 +56,9 @@ export default function ProfilePage() {
     const [addressList, setAddressList] = useState([]);
     const [showNewAddressForm, setShowNewAddressForm] = useState(false);
     const [defaultAddressId, setDefaultAddressId] = useState(null);
+    const [paymentList, setPaymentList] = useState([]);
+    const [showNewPaymentForm, setShowNewPaymentForm] = useState(false);
+    const [defaultPaymentId, setDefaultPaymentId] = useState(null);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
 
@@ -153,9 +157,10 @@ export default function ProfilePage() {
                     },
                     payment: {
                         method: '',
-                        cardNo: '',
+                        card_no: '',
                         expired: '',
-                        holderName: ''
+                        holder_name: '',
+                        is_default: false
                     },
                 })
             } catch (error) {
@@ -184,6 +189,23 @@ export default function ProfilePage() {
                 });
         }
     }, [isLoggedIn, activeTab]);
+
+    useEffect(() => {
+        if (isLoggedIn && activeTab === 'payment') {
+            const token = localStorage.getItem('jwt_access');
+            fetch(`${getUserUrl()}/api/payment/`, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+                .then(res => res.json())
+                .then(json => {
+                    setPaymentList(json.data);
+                    const def = json.data.find(p => p.is_default);
+                    if (def) setDefaultPaymentId(def.id);
+                })
+                .catch(err => console.error('Error fetching payment methods:', err));
+        }
+    }, [isLoggedIn, activeTab]);
+
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -241,7 +263,7 @@ export default function ProfilePage() {
         alert("บันทึกข้อมูลเรียบร้อยแล้ว!");
     }
 
-    const handleDefaultChange = async (addrId) => {
+    const handleDefaultAddress = async (addrId) => {
         const token = localStorage.getItem('jwt_access');
         const res = await fetch(`${getUserUrl()}/api/address/${addrId}/`, {
             method: 'PUT',
@@ -259,6 +281,19 @@ export default function ProfilePage() {
         );
     };
 
+    const fetchAddressList = async () => {
+        const token = localStorage.getItem('jwt_access');
+        fetch(`${getUserUrl()}/api/address/`, {
+            headers: { Authorization: `Bearer ${token}` }
+        })
+            .then(res => res.json())
+            .then(json => {
+                setAddressList(json.data);
+                const def = json.data.find(a => a.is_default);
+                if (def) setDefaultAddressId(def.id);
+            })
+            .catch(err => console.error('Error fetching addresses:', err));
+    };
 
     const handleAddressSubmit = async (e) => {
         e.preventDefault();
@@ -313,7 +348,7 @@ export default function ProfilePage() {
             }));
 
             setShowNewAddressForm(false);
-            fetchAddressList();
+            await fetchAddressList();
             const responseData = await response.json();
             console.log('บันทึกที่อยู่สำเร็จ', responseData);
             alert('บันทึกที่อยู่สำเร็จ')
@@ -322,6 +357,101 @@ export default function ProfilePage() {
             alert('บันทึกที่ไม่สำเร็จ')
         }
     };
+
+    const handleDefaultPayment = async (pmId) => {
+        const token = localStorage.getItem('jwt_access');
+        const res = await fetch(`${getUserUrl()}/api/payment/${pmId}/`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ is_default: true }),
+        });
+
+        if (!res.ok) return console.error('Fail to set default payment method');
+        setDefaultPaymentId(pmId);
+        setPaymentList(prev =>
+            prev.map(p => ({ ...p, is_default: p.id === pmId }))
+        );
+    };
+
+    const fetchPaymentList = async () => {
+        const token = localStorage.getItem('jwt_access');
+        fetch(`${getUserUrl()}/api/payment/`, {
+            headers: { Authorization: `Bearer ${token}` }
+        })
+            .then(res => res.json())
+            .then(json => {
+                setPaymentList(json.data);
+                const def = json.data.find(p => p.is_default);
+                if (def) setDefaultPaymentId(def.id);
+            })
+            .catch(err => console.error('Error fetching payment methods:', err));
+    };
+
+
+    const handlePaymentSubmit = async (e) => {
+        e.preventDefault();
+        const token = localStorage.getItem('jwt_access');
+        const card_no = formData.payment.card_no;
+
+        if (card_no.length > 16) {
+            alert("เลขบัตรเครดิตต้องไม่เกิน 16 ตัว");
+            return;
+        }
+
+        const paymentData = {
+            method: formData.payment.method,
+            card_no: card_no,
+            expired: formData.payment.expired,
+            holder_name: formData.payment.holder_name,
+            is_default: formData.payment.is_default,
+        };
+
+        try {
+            const response = await fetch(`${getUserUrl()}/api/payment/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(paymentData),
+            });
+
+            if (response.status === 401) {
+                alert("Session หมดอายุ กรุณาเข้าสู่ระบบใหม่");
+                localStorage.removeItem("jwt_access");
+                router.push("/login");
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error('Failed to submit payment');
+            }
+
+            setFormData(prev => ({
+                ...prev,
+                payment: {
+                    method: '',
+                    card_no: '',
+                    expired: '',
+                    holder_name: '',
+                    is_default: false,
+                },
+            }));
+
+            setShowNewPaymentForm(false);
+            fetchPaymentList();
+            const responseData = await response.json();
+            console.log('บันทึกข้อมูลการชำระเงินสำเร็จ', responseData);
+            alert('บันทึกข้อมูลการชำระเงินสำเร็จ');
+        } catch (error) {
+            console.error('Error submitting payment:', error);
+            alert('บันทึกการชำระเงินไม่สำเร็จ');
+        }
+    };
+
 
 
     const navLinks = [
@@ -565,7 +695,7 @@ export default function ProfilePage() {
                                                         name="defaultAddress"
                                                         value={addr.id}
                                                         checked={defaultAddressId === addr.id}
-                                                        onChange={() => handleDefaultChange(addr.id)}
+                                                        onChange={() => handleDefaultAddress(addr.id)}
                                                         className="accent-[#8b4513]"
                                                     />
                                                     <div className="text-[#8b4513]">
@@ -683,8 +813,97 @@ export default function ProfilePage() {
                             )}
 
                             {activeTab === 'payment' && (
-                                <>
-                                </>
+                                <div>
+                                    {!showNewPaymentForm ? (
+                                        <div className="space-y-3">
+                                            {paymentList.map(pm => (
+                                                <label
+                                                    key={pm.id}
+                                                    className="flex items-center space-x-2 p-3 border border-[#8b4513]/50 rounded-lg bg-[#fdf6e3]"
+                                                >
+                                                    <input
+                                                        type="radio"
+                                                        name="defaultPayment"
+                                                        value={pm.id}
+                                                        checked={defaultPaymentId === pm.id}
+                                                        onChange={() => handleDefaultPayment(pm.id)}
+                                                        className="accent-[#8b4513]"
+                                                    />
+                                                    <div className="text-[#8b4513]">
+                                                        <p className="font-semibold">{pm.method}</p>
+                                                        <p className="text-sm">
+                                                            •••• •••• •••• {pm.card_no.slice(-4)}
+                                                        </p>
+                                                        {pm.is_default && <span className="text-xs text-green-700">Default</span>}
+                                                    </div>
+                                                </label>
+                                            ))}
+
+                                            <div className="text-left mt-4">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowNewPaymentForm(true)}
+                                                    className="px-6 py-2 bg-[#f4d03f] text-[#8b4513] rounded-lg hover:bg-[#e6c02f] transition-colors duration-200 font-semibold"
+                                                >
+                                                    + Add Payment Method
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4 p-4 mt-4 border border-[#8b4513]/50 rounded-lg bg-[#fdf6e3]">
+                                            {['method', 'card_no', 'expired', 'holder_name'].map(field => (
+                                                <div key={field}>
+                                                    <label className="block text-sm font-medium text-[#8b4513] mb-2 capitalize">
+                                                        {field === 'method'
+                                                            ? 'Payment Method'
+                                                            : field === 'card_no'
+                                                                ? 'Card Number'
+                                                                : field === 'expired'
+                                                                    ? 'Expiration (MM/YY)'
+                                                                    : 'Cardholder Name'} *
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        name={field}
+                                                        required
+                                                        value={formData.payment[field]}
+                                                        onChange={handleChange}
+                                                        className="w-full p-3 border border-[#8b4513]/50 rounded-lg bg-white text-[#8b4513] focus:ring-[#f4d03f] focus:border-[#f4d03f]"
+                                                        maxLength={16}
+                                                    />
+                                                </div>
+                                            ))}
+
+                                            <div className="flex items-center space-x-2">
+                                                <input
+                                                    type="checkbox"
+                                                    name="is_default"
+                                                    checked={formData.payment.is_default}
+                                                    onChange={handleChange}
+                                                    className="accent-[#8b4513]"
+                                                />
+                                                <label className="text-[#8b4513]">Set as default</label>
+                                            </div>
+
+                                            <div className="flex justify-between">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowNewPaymentForm(false)}
+                                                    className="bg-[#f4d03f] text-[#8b4513] px-6 py-3 rounded-lg hover:bg-[#e6c02f] transition-colors duration-200 font-semibold"
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={handlePaymentSubmit}
+                                                    className="bg-[#f4d03f] text-[#8b4513] px-6 py-3 rounded-lg hover:bg-[#e6c02f] transition-colors duration-200 font-semibold"
+                                                >
+                                                    Save Payment Method
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             )}
                         </form>
                     </div>
