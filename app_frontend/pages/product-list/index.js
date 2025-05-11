@@ -1,8 +1,8 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState, useRef } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { getProductUrl } from '@/baseurl';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { getProductUrl, getUserUrl } from '@/baseurl';
 
 function isTokenExpired(token) {
     try {
@@ -21,6 +21,9 @@ export default function ProductListPage() {
     const [selectedCategory, setSelectedCategory] = useState(initialCategory || null);
     const [searchTerm, setSearchTerm] = useState('');
     const [cartCount, setCartCount] = useState(0)
+    const [userProvince, setUserProvince] = useState(null);
+    const [filterByLocation, setFilterByLocation] = useState(false);
+
     const dropdownRef = useRef(null);
 
     const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -80,18 +83,53 @@ export default function ProductListPage() {
     ];
 
     useEffect(() => {
+        if (userProvince === undefined) return;
         async function fetchProducts() {
             try {
-                const res = await fetch(`${getProductUrl()}/api/product/all/`);
-                const json = await res.json();
-                const available = json.data.filter(item => item.available);
-                setProducts(available);
-            } catch (err) {
-                console.error('Failed to load products', err);
+                let url = `${getProductUrl()}/api/product/all/`;
+                if (filterByLocation && userProvince) {
+                    url += `?province=${encodeURIComponent(userProvince)}`;
+                }
+                const res = await fetch(url);
+                if (res.ok) {
+                    const json = await res.json();
+                    const available = json.data.filter(item => item.available);
+                    setProducts(available);
+                } else {
+                    console.error('Failed to load products', res.statusText);
+                }
+            } catch (e) {
+                console.error('Error loading products', e);
             }
         }
         fetchProducts();
-    }, []);
+    }, [userProvince, filterByLocation]);
+
+    useEffect(() => {
+        async function fetchAddress() {
+            if (!isLoggedIn) {
+                setUserProvince(null);
+                return;
+            }
+            const token = localStorage.getItem('jwt_access');
+            try {
+                const res = await fetch(`${getUserUrl()}/api/address/default/`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                if (res.ok) {
+                    const json = await res.json();
+                    setUserProvince(json.data?.province || null);
+                } else {
+                    console.error('Failed to load address', res.statusText);
+                    setUserProvince(null);
+                }
+            } catch (e) {
+                console.error('Error loading address', e);
+                setUserProvince(null);
+            }
+        }
+        fetchAddress();
+    }, [isLoggedIn]);
 
     useEffect(() => {
         const cat = searchParams.get('category');
@@ -192,6 +230,17 @@ export default function ProductListPage() {
                 <aside className="md:w-1/4 w-full bg-white rounded-xl shadow p-4">
                     <h2 className="text-lg font-bold text-gray-700 mb-4">ค้นหา / หมวดหมู่</h2>
                     <input type="text" placeholder="ค้นหาสินค้า..." className="w-full mb-4 border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-300" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                    {userProvince !== null && (
+                        <button
+                            onClick={() => setFilterByLocation(prev => !prev)}
+                            className={`w-full mb-4 flex items-center justify-center gap-2 px-3 py-2 rounded-full text-sm font-medium shadow-sm transition-colors duration-200 
+                                ${filterByLocation
+                                    ? 'bg-red-500 text-white hover:bg-red-600'
+                                    : 'bg-yellow-400 text-white hover:bg-yellow-500'}`}
+                        >
+                            {filterByLocation ? 'แสดงสินค้าทั้งหมด' : `กรองตามจังหวัด: ${userProvince}`}
+                        </button>
+                    )}
                     <div className="flex flex-col gap-2">
                         {categories.map((cat, idx) => (
                             <button key={idx} onClick={() => setSelectedCategory(cat.label)} className={`flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium transition ${selectedCategory === cat.label ? 'bg-yellow-400 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>

@@ -139,6 +139,17 @@ class AddressDetailView(APIView):
         return Response(status=204)
 
 
+class DefaultAddressView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, format=None):
+        addr = Address.objects.filter(user=request.user, is_default=True).first()
+        if not addr:
+            return Response({"error": "Default address not found"}, status=404)
+        serializer = AddressSerializer(addr)
+        return Response({"data": serializer.data})
+
+
 class PaymentMethodListView(APIView):
     permission_classes = [IsAuthenticated]
 

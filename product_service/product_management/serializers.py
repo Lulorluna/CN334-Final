@@ -24,4 +24,5 @@ class ProductSerializer(serializers.ModelSerializer):
             "stock",
             "expiration_date",
             "available",
+            "address",
         ]

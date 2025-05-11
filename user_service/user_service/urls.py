@@ -32,6 +32,7 @@ urlpatterns = [
     path("api/user/<username>/", UserView.as_view()),
     path("api/address/", AddressListView.as_view(), name="address-list"),
     path("api/address/<int:pk>/", AddressDetailView.as_view(), name="address-detail"),
+    path("api/address/default/", DefaultAddressView.as_view(), name="address-default"),
     path(
         "api/payment/",
         PaymentMethodListView.as_view(),
