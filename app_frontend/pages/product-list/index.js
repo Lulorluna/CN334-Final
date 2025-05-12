@@ -1,7 +1,8 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState, useRef } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { getProductUrl, getUserUrl } from '@/baseurl';
 
 function isTokenExpired(token) {
     try {
@@ -16,6 +17,13 @@ export default function ProductListPage() {
     const searchParams = useSearchParams();
     const initialCategory = searchParams.get('category');
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [products, setProducts] = useState([]);
+    const [selectedCategory, setSelectedCategory] = useState(initialCategory || null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [cartCount, setCartCount] = useState(0)
+    const [userProvince, setUserProvince] = useState(null);
+    const [filterByLocation, setFilterByLocation] = useState(false);
+
     const dropdownRef = useRef(null);
 
     const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -34,9 +42,16 @@ export default function ProductListPage() {
         return () => clearInterval(interval);
     }, []);
 
-    const [products, setProducts] = useState([]);
-    const [selectedCategory, setSelectedCategory] = useState(initialCategory || null);
-    const [searchTerm, setSearchTerm] = useState('');
+    useEffect(() => {
+        function updateCount() {
+            const stored = JSON.parse(localStorage.getItem('cart') || '[]')
+            const total = stored.reduce((sum, i) => sum + (i.quantity || 0), 0)
+            setCartCount(total)
+        }
+        updateCount()
+        window.addEventListener('storage', updateCount)
+        return () => window.removeEventListener('storage', updateCount)
+    }, [])
 
     useEffect(() => {
         function handleClickOutside(event) {
@@ -51,7 +66,7 @@ export default function ProductListPage() {
     const handleLogout = () => {
         localStorage.removeItem('jwt_access');
         setIsLoggedIn(false);
-        router.push('/login');
+        router.push('/');
     };
 
     const categories = [
@@ -68,18 +83,53 @@ export default function ProductListPage() {
     ];
 
     useEffect(() => {
+        if (userProvince === undefined) return;
         async function fetchProducts() {
             try {
-                const res = await fetch('http://127.0.0.1:3341/api/product/all/');
-                const json = await res.json();
-                const available = json.data.filter(item => item.available);
-                setProducts(available);
-            } catch (err) {
-                console.error('Failed to load products', err);
+                let url = `${getProductUrl()}/api/product/all/`;
+                if (filterByLocation && userProvince) {
+                    url += `?province=${encodeURIComponent(userProvince)}`;
+                }
+                const res = await fetch(url);
+                if (res.ok) {
+                    const json = await res.json();
+                    const available = json.data.filter(item => item.available);
+                    setProducts(available);
+                } else {
+                    console.error('Failed to load products', res.statusText);
+                }
+            } catch (e) {
+                console.error('Error loading products', e);
             }
         }
         fetchProducts();
-    }, []);
+    }, [userProvince, filterByLocation]);
+
+    useEffect(() => {
+        async function fetchAddress() {
+            if (!isLoggedIn) {
+                setUserProvince(null);
+                return;
+            }
+            const token = localStorage.getItem('jwt_access');
+            try {
+                const res = await fetch(`${getUserUrl()}/api/address/default/`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                if (res.ok) {
+                    const json = await res.json();
+                    setUserProvince(json.data?.province || null);
+                } else {
+                    console.error('Failed to load address', res.statusText);
+                    setUserProvince(null);
+                }
+            } catch (e) {
+                console.error('Error loading address', e);
+                setUserProvince(null);
+            }
+        }
+        fetchAddress();
+    }, [isLoggedIn]);
 
     useEffect(() => {
         const cat = searchParams.get('category');
@@ -127,7 +177,17 @@ export default function ProductListPage() {
                     <div className="flex gap-4 items-center">
                         {isLoggedIn ? (
                             <>
-                                <Link href="/order" className="p-2 border border-[#8b4513] rounded-full hover:bg-[#f4d03f] transition-colors duration-200">🛒</Link>
+                                <Link
+                                    href="/order"
+                                    className="relative p-2 border rounded-full hover:bg-[#f4d03f]"
+                                >
+                                    🛒
+                                    {cartCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
+                                            {cartCount}
+                                        </span>
+                                    )}
+                                </Link>
                                 <div className="relative" ref={dropdownRef}>
                                     <button
                                         onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -170,6 +230,17 @@ export default function ProductListPage() {
                 <aside className="md:w-1/4 w-full bg-white rounded-xl shadow p-4">
                     <h2 className="text-lg font-bold text-gray-700 mb-4">ค้นหา / หมวดหมู่</h2>
                     <input type="text" placeholder="ค้นหาสินค้า..." className="w-full mb-4 border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-300" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                    {userProvince !== null && (
+                        <button
+                            onClick={() => setFilterByLocation(prev => !prev)}
+                            className={`w-full mb-4 flex items-center justify-center gap-2 px-3 py-2 rounded-full text-sm font-medium shadow-sm transition-colors duration-200 
+                                ${filterByLocation
+                                    ? 'bg-red-500 text-white hover:bg-red-600'
+                                    : 'bg-yellow-400 text-white hover:bg-yellow-500'}`}
+                        >
+                            {filterByLocation ? 'แสดงสินค้าทั้งหมด' : `กรองตามจังหวัด: ${userProvince}`}
+                        </button>
+                    )}
                     <div className="flex flex-col gap-2">
                         {categories.map((cat, idx) => (
                             <button key={idx} onClick={() => setSelectedCategory(cat.label)} className={`flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium transition ${selectedCategory === cat.label ? 'bg-yellow-400 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>

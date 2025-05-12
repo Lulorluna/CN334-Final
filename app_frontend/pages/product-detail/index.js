@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import axios from 'axios';
+import { getProductUrl } from '@/baseurl';
 
 function isTokenExpired(token) {
     try {
@@ -25,6 +26,7 @@ export default function ProductDetailPage() {
     const [error, setError] = useState(null);
     const [quantity, setQuantity] = useState(1);
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [cartCount, setCartCount] = useState(0)
     const dropdownRef = useRef(null);
 
     useEffect(() => {
@@ -43,10 +45,21 @@ export default function ProductDetailPage() {
     }, []);
 
     useEffect(() => {
+        function updateCount() {
+            const stored = JSON.parse(localStorage.getItem('cart') || '[]')
+            const total = stored.reduce((sum, i) => sum + (i.quantity || 0), 0)
+            setCartCount(total)
+        }
+        updateCount()
+        window.addEventListener('storage', updateCount)
+        return () => window.removeEventListener('storage', updateCount)
+    }, [])
+
+    useEffect(() => {
         if (!id) return;
         async function fetchProduct() {
             try {
-                const response = await axios.get(`http://127.0.0.1:3341/api/product/${id}/`);
+                const response = await axios.get(`${getProductUrl()}/api/product/${id}/`);
                 setProduct(response.data.data);
                 setLoading(false);
             } catch (err) {
@@ -70,7 +83,7 @@ export default function ProductDetailPage() {
     const handleLogout = () => {
         localStorage.removeItem('jwt_access');
         setIsLoggedIn(false);
-        router.push('/login');
+        router.push('/');
     };
 
     const handleConfirm = async () => {
@@ -80,7 +93,7 @@ export default function ProductDetailPage() {
             try {
                 const token = localStorage.getItem('jwt_access');
                 await axios.post(
-                    'http://127.0.0.1:3341/api/cart/add/',
+                    `${getProductUrl()}/api/cart/add/`,
                     {
                         product_id: product.id,
                         quantity: quantity,
@@ -91,6 +104,14 @@ export default function ProductDetailPage() {
                         },
                     }
                 );
+                const prev = JSON.parse(localStorage.getItem('cart') || '[]')
+                const idx = prev.findIndex(i => i.id === product.id)
+                if (idx >= 0) {
+                    prev[idx].quantity += quantity
+                } else {
+                    prev.push({ id: product.id, quantity })
+                }
+                localStorage.setItem('cart', JSON.stringify(prev))
                 alert('เพิ่มสินค้าลงตะกร้าเรียบร้อยแล้ว');
             } catch (err) {
                 alert('ไม่สามารถเพิ่มสินค้าได้');
@@ -134,7 +155,17 @@ export default function ProductDetailPage() {
                     <div className="flex gap-4 items-center">
                         {isLoggedIn ? (
                             <>
-                                <Link href="/order" className="p-2 border border-[#8b4513] rounded-full hover:bg-[#f4d03f] transition-colors duration-200">🛒</Link>
+                                <Link
+                                    href="/order"
+                                    className="relative p-2 border rounded-full hover:bg-[#f4d03f]"
+                                >
+                                    🛒
+                                    {cartCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
+                                            {cartCount}
+                                        </span>
+                                    )}
+                                </Link>
                                 <div className="relative" ref={dropdownRef}>
                                     <button
                                         onClick={() => setDropdownOpen(!dropdownOpen)}

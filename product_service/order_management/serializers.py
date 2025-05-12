@@ -108,3 +108,28 @@ class PaymentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Payment
         fields = "__all__"
+
+
+class OrderConfirmSerializer(serializers.Serializer):
+    address_id = serializers.IntegerField()
+    shipping_id = serializers.IntegerField()
+    payment_method = serializers.ChoiceField(choices=Order.PAYMENT_CHOICES)
+    user_payment_method_id = serializers.IntegerField(required=False, allow_null=True)
+
+    def validate(self, data):
+        pm = data["payment_method"]
+        if pm == Order.PAYMENT_CREDIT and not data.get("user_payment_method_id"):
+            raise serializers.ValidationError("กรุณาเลือกวิธีการชำระเงินของคุณ")
+        return data
+
+    def save(self):
+        user = self.context["request"].user
+        order = Order.objects.get(customer=user, status=Order.STATUS_CART)
+
+        order.shipping_address_id = self.validated_data["address_id"]
+        order.shipping_id = self.validated_data["shipping_id"]
+        order.payment_method = self.validated_data["payment_method"]
+        order.user_payment_method_id = self.validated_data.get("user_payment_method_id")
+        order.status = Order.STATUS_PROCESSING
+        order.save()
+        return order

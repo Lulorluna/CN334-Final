@@ -10,8 +10,13 @@ class ProductListView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request, format=None):
-        products = Product.objects.all()
-        serializer = ProductSerializer(products, many=True)
+        qs = Product.objects.all()
+
+        province = request.query_params.get("province")
+        if province:
+            qs = qs.filter(address__iexact=province)
+
+        serializer = ProductSerializer(qs, many=True)
         return Response({"data": serializer.data}, status=200)
 
 

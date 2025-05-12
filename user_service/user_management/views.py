@@ -11,25 +11,33 @@ from rest_framework.views import APIView
 
 @csrf_exempt
 def register(request):
-    if request.method == "POST":
-        data = JSONParser().parse(request)
-        try:
-            new_user = User.objects.create_user(
-                username=data["username"],
-                password=data["password"],
-                email=data["email"],
-            )
-        except:
-            return JsonResponse({"error": "username already used."}, status=400)
-        new_user.save()
-        data["user"] = new_user.id
-        customer_serializer = CustomerSerializer(data=data)
-        if customer_serializer.is_valid():
-            customer_serializer.save()
-            return JsonResponse(customer_serializer.data, status=201)
-        new_user.delete()
-        return JsonResponse({"error": "data not valid"}, status=400)
-    return JsonResponse({"error": "method not allowed."}, status=405)
+    if request.method != "POST":
+        return JsonResponse({"error": "method not allowed."}, status=405)
+
+    data = JSONParser().parse(request)
+    username = data.get("username", "")
+
+    if re.search(r"(\'|--|;|\bOR\b|\bAND\b)", username, re.IGNORECASE):
+        return JsonResponse({"error": "invalid username."}, status=400)
+
+    try:
+        new_user = User.objects.create_user(
+            username=username,
+            password=data["password"],
+            email=data["email"],
+        )
+    except:
+        return JsonResponse({"error": "username already used."}, status=400)
+
+    new_user.save()
+    data["user_id"] = new_user.id
+    customer_serializer = CustomerSerializer(data=data)
+    if customer_serializer.is_valid():
+        customer_serializer.save()
+        return JsonResponse(customer_serializer.data, status=201)
+
+    new_user.delete()
+    return JsonResponse({"error": "data not valid"}, status=400)
 
 
 class CustomerView(APIView):
@@ -73,7 +81,7 @@ class UserView(APIView):
             return Response({"error": "User not found"}, status=404)
 
 
-class AddressListCreateView(APIView):
+class AddressListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, format=None):
@@ -82,6 +90,11 @@ class AddressListCreateView(APIView):
         return Response({"data": serializer.data})
 
     def post(self, request, format=None):
+        if request.data.get("is_default"):
+            Address.objects.filter(user=request.user, is_default=True).exclude(
+                pk=request.data.get("id")
+            ).update(is_default=False)
+
         serializer = AddressSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(user=request.user)
@@ -106,6 +119,12 @@ class AddressDetailView(APIView):
         addr = self.get_object(pk, request.user)
         if not addr:
             return Response(status=404)
+
+        if request.data.get("is_default"):
+            Address.objects.filter(user=request.user, is_default=True).exclude(
+                pk=pk
+            ).update(is_default=False)
+
         serializer = AddressSerializer(addr, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
@@ -120,7 +139,18 @@ class AddressDetailView(APIView):
         return Response(status=204)
 
 
-class PaymentMethodListCreateView(APIView):
+class DefaultAddressView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, format=None):
+        addr = Address.objects.filter(user=request.user, is_default=True).first()
+        if not addr:
+            return Response({"error": "Default address not found"}, status=404)
+        serializer = AddressSerializer(addr)
+        return Response({"data": serializer.data})
+
+
+class PaymentMethodListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, format=None):

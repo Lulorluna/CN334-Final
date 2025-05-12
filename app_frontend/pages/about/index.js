@@ -18,6 +18,7 @@ export default function AboutPage() {
     const [bgIndex, setBgIndex] = useState(0);
     const bgImages = ['/images/ba1.jpg', '/images/ba2.jpg', '/images/ba3.jpg'];
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [cartCount, setCartCount] = useState(0)
     const dropdownRef = useRef(null);
 
     useEffect(() => {
@@ -36,6 +37,17 @@ export default function AboutPage() {
     }, []);
 
     useEffect(() => {
+        function updateCount() {
+            const stored = JSON.parse(localStorage.getItem('cart') || '[]')
+            const total = stored.reduce((sum, i) => sum + (i.quantity || 0), 0)
+            setCartCount(total)
+        }
+        updateCount()
+        window.addEventListener('storage', updateCount)
+        return () => window.removeEventListener('storage', updateCount)
+    }, [])
+
+    useEffect(() => {
         function handleClickOutside(event) {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
                 setDropdownOpen(false);
@@ -48,7 +60,7 @@ export default function AboutPage() {
     const handleLogout = () => {
         localStorage.removeItem('jwt_access');
         setIsLoggedIn(false);
-        router.push('/login');
+        router.push('/');
     };
 
     useEffect(() => {
@@ -103,7 +115,17 @@ export default function AboutPage() {
                     <div className="flex gap-4 items-center">
                         {isLoggedIn ? (
                             <>
-                                <Link href="/order" className="p-2 border border-[#8b4513] rounded-full hover:bg-[#f4d03f] transition-colors duration-200">🛒</Link>
+                                <Link
+                                    href="/order"
+                                    className="relative p-2 border rounded-full hover:bg-[#f4d03f]"
+                                >
+                                    🛒
+                                    {cartCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
+                                            {cartCount}
+                                        </span>
+                                    )}
+                                </Link>
                                 <div className="relative" ref={dropdownRef}>
                                     <button
                                         onClick={() => setDropdownOpen(!dropdownOpen)}

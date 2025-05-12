@@ -1,5 +1,7 @@
+import re
 from rest_framework import serializers
 from user_management.models import *
+from django.utils.html import strip_tags
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -9,11 +11,19 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class CustomerSerializer(serializers.ModelSerializer):
-    user = UserSerializer()
+    user = UserSerializer(read_only=True)
+    user_id = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(), write_only=True, source="user"
+    )
 
     class Meta:
         model = Customer
-        fields = ["id", "user", "fullname", "date_of_birth", "sex", "tel"]
+        fields = ["id", "user", "user_id", "fullname", "date_of_birth", "sex", "tel"]
+
+    def validate_fullname(self, value):
+        if re.search(r"<\s*script", value, re.IGNORECASE):
+            raise serializers.ValidationError("Invalid characters in fullname")
+        return strip_tags(value)
 
     def update(self, instance, validated_data):
         user_data = validated_data.pop("user", None)

@@ -25,17 +25,18 @@ from rest_framework_simplejwt.views import (
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("api/register", register),
+    path("api/register/", register, name="register"),
     path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("api/myinfo/", CustomerView.as_view(), name="myinfo"),
     path("api/user/<username>/", UserView.as_view()),
-    path("api/address/", AddressListCreateView.as_view(), name="address-list"),
+    path("api/address/", AddressListView.as_view(), name="address-list"),
     path("api/address/<int:pk>/", AddressDetailView.as_view(), name="address-detail"),
+    path("api/address/default/", DefaultAddressView.as_view(), name="address-default"),
     path(
         "api/payment/",
-        PaymentMethodListCreateView.as_view(),
-        name="paymentmethod-list-create",
+        PaymentMethodListView.as_view(),
+        name="paymentmethod-list",
     ),
     path(
         "api/payment/<int:pk>/",

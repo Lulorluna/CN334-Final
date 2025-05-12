@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Image from 'next/image';
+import { getUserUrl, getProductUrl } from '@/baseurl';
 
 function isTokenExpired(token) {
     try {
@@ -52,7 +53,7 @@ export default function SummarizePage() {
             const token = localStorage.getItem('jwt_access');
             if (!token) { setLoading(false); return; }
             try {
-                const res = await fetch(`http://127.0.0.1:3341/api/order/${orderIdParam}/`, {
+                const res = await fetch(`${getProductUrl()}/api/order/${orderIdParam}/`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 if (!res.ok) throw new Error('การดึงคำสั่งซื้อล้มเหลว');
@@ -75,7 +76,7 @@ export default function SummarizePage() {
 
                 if (order.shipping_address) {
                     const dataAddr = await fetch(
-                        `http://127.0.0.1:3342/api/address/${order.shipping_address}/`,
+                        `${getUserUrl()}/api/address/${order.shipping_address}/`,
                         { headers: { Authorization: `Bearer ${token}` } }
                     );
                     if (dataAddr.ok) {
@@ -108,7 +109,7 @@ export default function SummarizePage() {
     const handleLogout = () => {
         localStorage.removeItem('jwt_access');
         setIsLoggedIn(false);
-        router.push('/login');
+        router.push('/');
     };
 
     if (loading) return (

@@ -49,7 +49,6 @@ class OrderDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, id, format=None):
-        # หาเฉพาะ order ของ user ที่ตรงกับ id
         try:
             order = Order.objects.get(pk=id, customer=request.user)
         except Order.DoesNotExist:
@@ -64,7 +63,10 @@ class AddToCartView(APIView):
 
     def post(self, request, format=None):
         product_id = request.data.get("product_id")
-        quantity = int(request.data.get("quantity", 1))
+        try:
+            quantity = int(request.data.get("quantity", 1))
+        except (ValueError, TypeError):
+            return Response({"error": "Quantity must be a number."}, status=400)
 
         product = get_object_or_404(Product, pk=product_id)
 
@@ -158,46 +160,28 @@ class ConfirmOrderView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        order = Order.objects.filter(
-            customer=request.user, status=Order.STATUS_CART
-        ).first()
-        if not order:
-            return Response({"error": "Order not found or not in cart"}, status=404)
+        serializer = OrderConfirmSerializer(
+            data=request.data,
+            context={"request": request},
+        )
+        serializer.is_valid(raise_exception=True)
+        order = serializer.save()
 
-        address_id = request.data.get("address_id")
-        payment_id = request.data.get("payment_id")
-        shipping_id = request.data.get("shipping_id")
-
-        if not all([address_id, payment_id, shipping_id]):
-            return Response(
-                {"error": "address_id, payment_id และ shipping_id ต้องระบุให้ครบ"},
-                status=400,
-            )
-
-        order.shipping_address_id = address_id
-        order.user_payment_method_id = payment_id
-
-        shipping_obj = get_object_or_404(Shipping, pk=shipping_id)
-        order.shipping = shipping_obj
-
-        order.save()
-
-        order.status = Order.STATUS_PROCESSING
-        order.save()
-
-        for po in ProductOrder.objects.filter(order=order):
-            if po.product.stock >= po.quantity:
-                po.product.stock -= po.quantity
-                po.product.save()
-            else:
+        for po in order.items.all():
+            if po.product.stock < po.quantity:
                 return Response(
                     {"error": f"Not enough stock for {po.product.name}"}, status=400
                 )
+            po.product.stock -= po.quantity
+            po.product.save()
 
-        return Response(
-            {"message": "Order confirmed and stock updated", "order_id": order.id},
-            status=200,
-        )
+        order.status = Order.STATUS_PENDING
+        order.save()
+
+        if order.payment_method == Order.PAYMENT_QR:
+            Payment.objects.create(order=order)
+
+        return Response({"order_id": order.id}, status=200)
 
 
 class ShippingListView(APIView):

@@ -4,6 +4,7 @@ from django.core.validators import MinValueValidator
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.contrib.auth.models import User
+from django.utils.html import strip_tags
 
 
 # Create your models here.
@@ -31,6 +32,21 @@ class Order(models.Model):
         (STATUS_IN_TRANSIT, "กำลังจัดส่ง"),
         (STATUS_SHIPPED, "จัดส่งแล้ว"),
     ]
+    PAYMENT_CREDIT = "credit_card"
+    PAYMENT_COD = "cash_on_delivery"
+    PAYMENT_QR = "qr_code"
+    PAYMENT_CHOICES = [
+        (PAYMENT_CREDIT, "บัตรเครดิต/เดบิต"),
+        (PAYMENT_COD, "เก็บเงินปลายทาง"),
+        (PAYMENT_QR, "สแกน QR Code"),
+    ]
+
+    payment_method = models.CharField(
+        max_length=20,
+        choices=PAYMENT_CHOICES,
+        default=PAYMENT_COD,
+    )
+
     customer = models.ForeignKey(User, on_delete=models.CASCADE, default=1)
     shipping = models.ForeignKey(Shipping, on_delete=models.SET_NULL, null=True)
     shipping_address_id = models.IntegerField(null=True, blank=True)
@@ -43,7 +59,7 @@ class Order(models.Model):
         default=0,
     )
     status = models.CharField(
-        max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING
+        max_length=100, choices=STATUS_CHOICES, default=STATUS_PENDING
     )
     create_at = models.DateTimeField(auto_now_add=True)
     update_at = models.DateTimeField(auto_now=True)
@@ -51,6 +67,10 @@ class Order(models.Model):
     @property
     def calculated_total(self):
         return sum(item.total_price for item in self.items.all())
+
+    def save(self, *args, **kwargs):
+        self.status = strip_tags(self.status)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Order: {self.pk} - {self.customer_id}"
@@ -66,7 +86,6 @@ class ProductOrder(models.Model):
         return self.product.price * self.quantity
 
     def save(self, *args, **kwargs):
-        # เช็คว่า order เป็นตะกร้า
         if self.order.status == Order.STATUS_CART:
             existing = (
                 ProductOrder.objects.filter(order=self.order, product=self.product)
