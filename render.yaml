@@ -34,12 +34,16 @@ services:
         value: 3002
 
   # App Service
-  - type: web
-    name: cn334-app
-    env: docker
-    dockerComposeFile: ./docker-compose.yml
-    envVars:
+  - type: web  # หรือ type อื่นที่เหมาะสมสำหรับ service หลักใน docker-compose ของคุณ
+    name: cn334-app # ชื่อ service บน Render
+    runtime: docker # ระบุ runtime เป็น docker
+    # dockerContext: . # (ถ้า docker-compose.yml อยู่ใน root ก็ไม่จำเป็นต้องใส่)
+    # Render จะหา docker-compose.yml ใน context นี้โดยอัตโนมัติ
+    # และจะ deploy services ทั้งหมดที่นิยามไว้ใน docker-compose.yml
+    envVars: # Environment Variables เหล่านี้สามารถส่งต่อไปยัง services ใน docker-compose.yml ได้
       - key: NODE_ENV
         value: production
       - key: NEXT_PUBLIC_API_URL
-        value: https://cn334-app.onrender.com 
+        value: https://cn334-app.onrender.com # หรือตัวแปรอื่นๆ ที่จำเป็น
+    # คุณอาจจะต้องตั้งค่าเพิ่มเติม เช่น health check route หรือ port
+    # โดยอ้างอิงจาก service หลักใน docker-compose.yml ของคุณ
