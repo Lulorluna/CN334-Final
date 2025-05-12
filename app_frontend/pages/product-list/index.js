@@ -117,8 +117,10 @@ export default function ProductListPage() {
         async function fetchAddress() {
             if (!isLoggedIn) {
                 setUserProvince(null);
+                setFilterByLocation(false);
                 return;
             }
+
             const token = localStorage.getItem('jwt_access');
             try {
                 const res = await fetch(`${getUserUrl()}/api/address/default/`, {
@@ -126,18 +128,24 @@ export default function ProductListPage() {
                 });
                 if (res.ok) {
                     const json = await res.json();
-                    setUserProvince(json.data?.province || null);
+                    const province = json.data?.province || null;
+                    setUserProvince(province);
+                    setFilterByLocation(!!province);
                 } else {
                     console.error('Failed to load address', res.statusText);
                     setUserProvince(null);
+                    setFilterByLocation(false);
                 }
             } catch (e) {
                 console.error('Error loading address', e);
                 setUserProvince(null);
+                setFilterByLocation(false);
             }
         }
+
         fetchAddress();
     }, [isLoggedIn]);
+
 
     useEffect(() => {
         const cat = searchParams.get('category');
