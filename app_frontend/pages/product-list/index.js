@@ -22,7 +22,6 @@ export default function ProductListPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [cartCount, setCartCount] = useState(0)
     const [userProvince, setUserProvince] = useState(undefined);
-    const [filterByLocation, setFilterByLocation] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
     const dropdownRef = useRef(null);
@@ -117,7 +116,6 @@ export default function ProductListPage() {
         async function fetchAddress() {
             if (!isLoggedIn) {
                 setUserProvince(null);
-                setFilterByLocation(false);
                 return;
             }
 
@@ -130,16 +128,13 @@ export default function ProductListPage() {
                     const json = await res.json();
                     const province = json.data?.province || null;
                     setUserProvince(province);
-                    setFilterByLocation(!!province);
                 } else {
                     console.error('Failed to load address', res.statusText);
                     setUserProvince(null);
-                    setFilterByLocation(false);
                 }
             } catch (e) {
                 console.error('Error loading address', e);
                 setUserProvince(null);
-                setFilterByLocation(false);
             }
         }
 
