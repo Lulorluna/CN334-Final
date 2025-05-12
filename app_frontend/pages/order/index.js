@@ -37,6 +37,7 @@ export default function OrderSummaryPage() {
     const [selectedPaymentId, setSelectedPaymentId] = useState(null);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [cartCount, setCartCount] = useState(0);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const dropdownRef = useRef(null);
 
     useEffect(() => {
@@ -163,23 +164,27 @@ export default function OrderSummaryPage() {
                     fetch(`${getUserUrl()}/api/payment/`, { headers }),
                     fetch(`${getProductUrl()}/api/shipping/`, { headers }),
                 ]);
-                const { data: al = [] } = await ar.json();
-                const { data: pl = [] } = await pr.json();
+                const { data: addrlist = [] } = await ar.json();
+                const { data: paylist = [] } = await pr.json();
                 const sj = await sr.json();
                 const sl = Array.isArray(sj) ? sj : sj.data || [];
 
-                setAddresses(al);
-                setPayments(pl);
+                const sortedAddresses = [...addrlist].sort((a, b) => (b.is_default ? 1 : 0) - (a.is_default ? 1 : 0));
+                const sortedPayments = [...paylist].sort((a, b) => (b.is_default ? 1 : 0) - (a.is_default ? 1 : 0));
+
+                setAddresses(sortedAddresses);
+                setPayments(sortedPayments);
                 setShippings(sl);
 
-                if (al.length) setSelectedAddressId(al[0].id);
-                if (pl.length) setSelectedPaymentId(pl[0].id);
+                if (sortedAddresses.length) setSelectedAddressId(sortedAddresses[0].id);
+                if (sortedPayments.length) setSelectedPaymentId(sortedPayments[0].id);
                 if (sl.length) setSelectedShippingId(sl[0].id);
             } catch (e) {
                 console.error(e);
             }
         })();
     }, []);
+
 
     const removeItemFromCart = async (productId) => {
         try {
@@ -240,6 +245,8 @@ export default function OrderSummaryPage() {
     };
 
     const handleConfirm = async () => {
+        if (isSubmitting) return;
+
         if (!selectedAddressId || !selectedShippingId) {
             alert("กรุณาเลือกที่อยู่ และวิธีจัดส่ง");
             return;
@@ -254,6 +261,7 @@ export default function OrderSummaryPage() {
         }
 
         try {
+            setIsSubmitting(true);
             const token = localStorage.getItem("jwt_access");
             const res = await fetch(`${getProductUrl()}/api/order/confirm/`, {
                 method: "POST",
@@ -279,12 +287,20 @@ export default function OrderSummaryPage() {
         } catch (err) {
             console.error(err);
             alert("ยืนยันคำสั่งซื้อไม่สำเร็จ: " + err.message);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
 
+
     return (
         <div className="flex flex-col min-h-screen bg-cover" style={{ backgroundImage: "url('/images/bg.png')" }}>
+            {isSubmitting && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-yellow-500"></div>
+                </div>
+            )}
             <header className="fixed top-0 w-full bg-[#fff8e1] shadow-md z-50">
                 <div className="container mx-auto flex items-center justify-between p-4">
                     <Link href="/" className="flex items-center gap-2 relative group">
@@ -413,17 +429,15 @@ export default function OrderSummaryPage() {
                             </label>
                             <button
                                 onClick={handleConfirm}
-                                disabled={!canConfirm}
+                                disabled={!canConfirm || isSubmitting}
                                 className={`mt-6 w-full py-3 rounded-lg font-bold transition 
-                                    ${canConfirm
-                                        ? 'bg-green-500 hover:bg-green-600 text-white'
-                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    ${!canConfirm || isSubmitting
+                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                        : 'bg-green-500 hover:bg-green-600 text-white'
                                     }`}
                             >
-                                ยืนยันการสั่งซื้อ
+                                {isSubmitting ? 'กำลังส่งคำสั่งซื้อ...' : 'ยืนยันการสั่งซื้อ'}
                             </button>
-
-
                         </div>
                     )}
                 </div>

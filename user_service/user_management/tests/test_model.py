@@ -15,7 +15,7 @@ class CustomerModelTest(TestCase):
             user=user, fullname="Name", date_of_birth="2000-01-01", sex="M", tel="08123"
         )
         customer.save()
-        self.assertEqual(str(cust), "C1")
+        self.assertEqual(str(customer), "C1")
 
     def test_invalid_tel(self):
         """[Invalid Input] non-numeric tel raises ValidationError"""

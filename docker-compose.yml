@@ -1,14 +1,61 @@
+# services:
+#   db:
+#     image: postgres:15
+#     volumes:
+#       - ./data/db:/var/lib/postgresql/data
+#     environment:
+#       - POSTGRES_DB=postgres
+#       - POSTGRES_USER=cn334Admin
+#       - POSTGRES_PASSWORD=cn334Admin
+#     ports:
+#       - "5432:5432"
+#   product_api:
+#     build: ./product_service
+#     command: python manage.py runserver 0.0.0.0:8888
+#     volumes:
+#       - ./product_service:/code
+#     ports:
+#       - "3341:8888"
+#     env_file:
+#       - .env
+#     environment:
+#       - POSTGRES_NAME=postgres
+#       - POSTGRES_USER=cn334Admin
+#       - POSTGRES_PASSWORD=cn334Admin
+#     depends_on:
+#       - db
+#   user_api:
+#     build: ./user_service
+#     command: python manage.py runserver 0.0.0.0:8888
+#     volumes:
+#       - ./user_service:/code
+#     ports:
+#       - "3342:8888"
+#     environment:
+#       - POSTGRES_NAME=postgres
+#       - POSTGRES_USER=cn334Admin
+#       - POSTGRES_PASSWORD=cn334Admin
+#     depends_on:
+#       - db
+#   front_end:
+#     build: ./app_frontend
+#     command: npm run dev
+#     volumes:
+#       - ./app_frontend:/app
+#       - /app/node_modules
+#     ports:
+#       - "3343:3000"
+
 services:
   db:
     image: postgres:15
     volumes:
       - ./data/db:/var/lib/postgresql/data
-    environment:
-      - POSTGRES_DB=postgres
-      - POSTGRES_USER=cn334Admin
-      - POSTGRES_PASSWORD=cn334Admin
+    env_file:
+      - ./.env
     ports:
       - "5432:5432"
+
   product_api:
     build: ./product_service
     command: python manage.py runserver 0.0.0.0:8888
@@ -16,12 +63,11 @@ services:
       - ./product_service:/code
     ports:
       - "3341:8888"
-    environment:
-      - POSTGRES_NAME=postgres
-      - POSTGRES_USER=cn334Admin
-      - POSTGRES_PASSWORD=cn334Admin
+    env_file:
+      - ./.env
     depends_on:
       - db
+
   user_api:
     build: ./user_service
     command: python manage.py runserver 0.0.0.0:8888
@@ -29,12 +75,11 @@ services:
       - ./user_service:/code
     ports:
       - "3342:8888"
-    environment:
-      - POSTGRES_NAME=postgres
-      - POSTGRES_USER=cn334Admin
-      - POSTGRES_PASSWORD=cn334Admin
+    env_file:
+      - ./.env
     depends_on:
       - db
+
   front_end:
     build: ./app_frontend
     command: npm run dev

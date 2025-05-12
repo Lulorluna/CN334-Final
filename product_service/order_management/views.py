@@ -5,6 +5,21 @@ from django.shortcuts import get_object_or_404
 from order_management.models import *
 from order_management.serializers import *
 from product_management.serializers import ProductSerializer
+from django.db import transaction
+
+# pun add
+from django.core.mail import send_mail
+from django.conf import settings  # เพื่อใช้ EMAIL_HOST_USER
+from django.template.loader import render_to_string  # สำหรับ HTML email (ทางเลือก)
+
+# from user_service.user_management.models import *
+# Render HTML email
+from django.template.loader import render_to_string
+from django.core.mail import send_mail
+from django.utils.html import strip_tags
+
+# Get address details from user_service
+import requests
 
 
 class UserOrderListView(APIView):
@@ -156,10 +171,40 @@ class UpdateCartItemView(APIView):
         return Response({"message": "Quantity updated", "data": serializer.data})
 
 
+# class ConfirmOrderView(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def post(self, request):
+#         serializer = OrderConfirmSerializer(
+#             data=request.data,
+#             context={"request": request},
+#         )
+#         serializer.is_valid(raise_exception=True)
+#         order = serializer.save()
+
+#         for po in order.items.all():
+#             if po.product.stock < po.quantity:
+#                 return Response(
+#                     {"error": f"Not enough stock for {po.product.name}"}, status=400
+#                 )
+#             po.product.stock -= po.quantity
+#             po.product.save()
+
+#         order.status = Order.STATUS_PENDING
+#         order.save()
+
+#         if order.payment_method == Order.PAYMENT_QR:
+#             Payment.objects.create(order=order)
+
+#         return Response({"order_id": order.id}, status=200)
+
+
 class ConfirmOrderView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @transaction.atomic
     def post(self, request):
+        # 1. Validate input and retrieve/update order using the serializer
         serializer = OrderConfirmSerializer(
             data=request.data,
             context={"request": request},
@@ -167,21 +212,96 @@ class ConfirmOrderView(APIView):
         serializer.is_valid(raise_exception=True)
         order = serializer.save()
 
-        for po in order.items.all():
-            if po.product.stock < po.quantity:
-                return Response(
-                    {"error": f"Not enough stock for {po.product.name}"}, status=400
-                )
-            po.product.stock -= po.quantity
-            po.product.save()
+        # 2. Check stock and deduct quantities
+        product_orders = order.items.all()
+        if not product_orders.exists():
+            return Response({"error": "Cannot confirm an empty order."}, status=400)
 
+        for po in product_orders:
+            product = Product.objects.select_for_update().get(pk=po.product.pk)
+            if product.stock < po.quantity:
+                return Response(
+                    {
+                        "error": f"Not enough stock for {product.name} (Available: {product.stock}). Order not confirmed."
+                    },
+                    status=400,
+                )
+            product.stock -= po.quantity
+            product.save()
+
+        # 3. Update Order Status
         order.status = Order.STATUS_PENDING
         order.save()
 
-        if order.payment_method == Order.PAYMENT_QR:
-            Payment.objects.create(order=order)
+        # 4. Create Payment Record if using QR code
+        if (
+            hasattr(order, "payment_method")
+            and order.payment_method == Order.PAYMENT_QR
+        ):
+            if "Payment" in globals() and issubclass(Payment, models.Model):
+                Payment.objects.create(order=order)
+            else:
+                print(
+                    f"Warning: Payment model not found or imported for QR payment creation for order {order.id}"
+                )
 
-        return Response({"order_id": order.id}, status=200)
+        # 5. Send Confirmation Email
+        try:
+            customer_email = request.user.email
+            if customer_email:
+                subject = f"ยืนยันคำสั่งซื้อหมายเลข #{order.id}"
+
+                # Prepare items data
+                items = []
+                total_items = 0
+                for po in product_orders:
+                    item_total = po.quantity * po.product.price
+                    items.append(
+                        {
+                            "name": po.product.name,
+                            "quantity": po.quantity,
+                            "price": po.product.price,
+                            "total": item_total,
+                        }
+                    )
+                    total_items += po.quantity
+
+                html_message = render_to_string(
+                    "order_confirmation_email.html",
+                    {
+                        "order": order,
+                        "user": request.user,
+                        "items": items,
+                        "total_items": total_items,
+                        "shipping_fee": order.shipping.fee if order.shipping else 0,
+                        "total_price": order.total_price,
+                    },
+                )
+
+                # Send email
+                send_mail(
+                    subject,
+                    strip_tags(html_message),  # Plain text version
+                    "mealofhope.official@gmail.com",
+                    [customer_email],
+                    html_message=html_message,  # HTML version
+                    fail_silently=False,
+                )
+                print(f"ส่งอีเมลยืนยันคำสั่งซื้อไปยัง {customer_email} สำหรับคำสั่งซื้อ #{order.id}")
+            else:
+                print(
+                    f"ไม่พบอีเมลของผู้ใช้ {request.user.username} (ID: {request.user.id}) สำหรับคำสั่งซื้อ {order.id}"
+                )
+        except Exception as e:
+            print(f"เกิดข้อผิดพลาดในการส่งอีเมลยืนยันคำสั่งซื้อ {order.id}: {e}")
+
+        return Response(
+            {
+                "order_id": order.id,
+                "message": "Order confirmed successfully. Confirmation email sent.",
+            },
+            status=200,
+        )
 
 
 class ShippingListView(APIView):
