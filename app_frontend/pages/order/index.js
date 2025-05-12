@@ -255,6 +255,12 @@ export default function OrderSummaryPage() {
 
         try {
             const token = localStorage.getItem("jwt_access");
+            if (!token) {
+                alert("กรุณาเข้าสู่ระบบก่อนดำเนินการ");
+                router.push('/login');
+                return;
+            }
+
             const res = await fetch(`${getProductUrl()}/api/order/confirm/`, {
                 method: "POST",
                 headers: {
@@ -270,15 +276,25 @@ export default function OrderSummaryPage() {
                 }),
             });
 
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || "Confirm failed");
+            let data;
+            try {
+                data = await res.json();
+            } catch (e) {
+                console.error("Failed to parse response:", e);
+                alert("เกิดข้อผิดพลาดในการประมวลผลคำสั่งซื้อ กรุณาลองใหม่อีกครั้ง");
+                return;
+            }
+
+            if (!res.ok) {
+                throw new Error(data.error || "ยืนยันคำสั่งซื้อไม่สำเร็จ");
+            }
 
             alert("ยืนยันเรียบร้อย");
             localStorage.removeItem("cart");
             router.push(`/summarize/${data.order_id}`);
         } catch (err) {
-            console.error(err);
-            alert("ยืนยันคำสั่งซื้อไม่สำเร็จ: " + err.message);
+            console.error("Order confirmation error:", err);
+            alert(err.message || "ยืนยันคำสั่งซื้อไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
         }
     };
 

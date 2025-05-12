@@ -1,0 +1,45 @@
+services:
+  # Frontend Service
+  - type: web
+    name: cn334-frontend
+    env: node
+    buildCommand: cd app_frontend && npm install && npm run build
+    startCommand: cd app_frontend && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        value: https://cn334-backend.onrender.com
+
+  # User Service
+  - type: web
+    name: cn334-user-service
+    env: docker
+    dockerfilePath: ./user_service/Dockerfile
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+
+  # Product Service
+  - type: web
+    name: cn334-product-service
+    env: docker
+    dockerfilePath: ./product_service/Dockerfile
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3002
+
+  # App Service
+  - type: web
+    name: cn334-app
+    env: docker
+    dockerComposeFile: ./docker-compose.yml
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        value: https://cn334-app.onrender.com 
