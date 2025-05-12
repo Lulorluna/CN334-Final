@@ -21,8 +21,9 @@ export default function ProductListPage() {
     const [selectedCategory, setSelectedCategory] = useState(initialCategory || null);
     const [searchTerm, setSearchTerm] = useState('');
     const [cartCount, setCartCount] = useState(0)
-    const [userProvince, setUserProvince] = useState(null);
+    const [userProvince, setUserProvince] = useState(undefined);
     const [filterByLocation, setFilterByLocation] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
     const dropdownRef = useRef(null);
 
@@ -87,7 +88,12 @@ export default function ProductListPage() {
         async function fetchProducts() {
             try {
                 let url = `${getProductUrl()}/api/product/all/`;
-                if (filterByLocation && userProvince) {
+                if (isLoggedIn) {
+                    if (!userProvince) {
+                        setProducts([]);
+                        setIsLoading(false);
+                        return;
+                    }
                     url += `?province=${encodeURIComponent(userProvince)}`;
                 }
                 const res = await fetch(url);
@@ -100,10 +106,12 @@ export default function ProductListPage() {
                 }
             } catch (e) {
                 console.error('Error loading products', e);
+            } finally {
+                setIsLoading(false);
             }
         }
         fetchProducts();
-    }, [userProvince, filterByLocation]);
+    }, [userProvince, isLoggedIn]);
 
     useEffect(() => {
         async function fetchAddress() {
@@ -230,16 +238,18 @@ export default function ProductListPage() {
                 <aside className="md:w-1/4 w-full bg-white rounded-xl shadow p-4">
                     <h2 className="text-lg font-bold text-gray-700 mb-4">ค้นหา / หมวดหมู่</h2>
                     <input type="text" placeholder="ค้นหาสินค้า..." className="w-full mb-4 border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-300" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
-                    {userProvince !== null && (
-                        <button
-                            onClick={() => setFilterByLocation(prev => !prev)}
-                            className={`w-full mb-4 flex items-center justify-center gap-2 px-3 py-2 rounded-full text-sm font-medium shadow-sm transition-colors duration-200 
-                                ${filterByLocation
-                                    ? 'bg-red-500 text-white hover:bg-red-600'
-                                    : 'bg-yellow-400 text-white hover:bg-yellow-500'}`}
-                        >
-                            {filterByLocation ? 'แสดงสินค้าทั้งหมด' : `กรองตามจังหวัด: ${userProvince}`}
-                        </button>
+                    {!isLoggedIn ? (
+                        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
+                            <p>กรุณาเข้าสู่ระบบเพื่อดูสินค้าในจังหวัดของคุณ</p>
+                        </div>
+                    ) : userProvince ? (
+                        <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4">
+                            <p>แสดงสินค้าในจังหวัด: {userProvince}</p>
+                        </div>
+                    ) : (
+                        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
+                            <p>กรุณาตั้งค่าที่อยู่เริ่มต้นเพื่อดูสินค้าในจังหวัดของคุณ</p>
+                        </div>
                     )}
                     <div className="flex flex-col gap-2">
                         {categories.map((cat, idx) => (
@@ -251,7 +261,9 @@ export default function ProductListPage() {
                     </div>
                 </aside>
                 <section className="md:w-3/4 w-full">
-                    {filteredProducts.length > 0 ? (
+                    {isLoading ? (
+                        <div className="text-center text-gray-500 mt-10">กำลังโหลดสินค้า...</div>
+                    ) : filteredProducts.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                             {filteredProducts.map(item => (
                                 <div key={item.id} className="bg-white rounded-xl shadow hover:shadow-lg transition p-4 flex flex-col justify-between">

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {
+            font-family: 'Sarabun', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            color: #8b4513;
+            margin-bottom: 30px;
+        }
+        .order-details {
+            background-color: #fff8e1;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .product-list {
+            margin: 20px 0;
+        }
+        .product-item {
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .total-section {
+            text-align: right;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #f4d03f;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>ยืนยันคำสั่งซื้อ #{{ order.id }}</h1>
+    </div>
+
+    <div class="order-details">
+        <p>เรียน คุณ {{ user.first_name|default:user.username }},</p>
+        <p>ขอบคุณที่ใช้บริการของเรา! คำสั่งซื้อของคุณหมายเลข #{{ order.id }} ได้รับการยืนยันเรียบร้อยแล้ว</p>
+
+        <h2>รายละเอียดคำสั่งซื้อ:</h2>
+        <p>วันที่สั่งซื้อ: {{ order.create_at|date:"d/m/Y H:i" }}</p>
+        <p>จำนวนสินค้าทั้งหมด: {{ total_items }} ชิ้น</p>
+
+        <div class="product-list">
+            <h3>รายการสินค้า:</h3>
+            {% for item in items %}
+            <div class="product-item">
+                <p><strong>{{ item.name }}</strong></p>
+                <p>จำนวน: {{ item.quantity }} ชิ้น</p>
+                <p>ราคาต่อชิ้น: ฿{{ item.price|floatformat:2 }}</p>
+                <p>รวม: ฿{{ item.total|floatformat:2 }}</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="total-section">
+            <p>ค่าจัดส่ง: ฿{{ shipping_fee|floatformat:2 }}</p>
+            <p><strong>ยอดรวมสุทธิ: ฿{{ total_price|floatformat:2 }}</strong></p>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>คุณสามารถติดตามสถานะคำสั่งซื้อได้ที่เว็บไซต์ของเรา</p>
+        <p>หากมีข้อสงสัยเพิ่มเติม กรุณาติดต่อเราได้ที่ mealofhope.official@gmail.com</p>
+        <p>ขอแสดงความนับถือ<br>ทีมงานของเรา</p>
+    </div>
+</body>
+</html> 

@@ -76,21 +76,31 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "product_service.wsgi.application"
 
+# Email settings
+EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+EMAIL_HOST = os.environ.get('EMAIL_HOST')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587)) # แปลงเป็น int
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() == 'true' # แปลงเป็น boolean
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER') # ชื่อนี้ตรงกับใน docker-compose.yml
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD') # ชื่อนี้ตรงกับใน docker-compose.yml
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
+
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
+# ใน settings.py ของทั้ง product_service และ user_service
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("POSTGRES_NAME"),
+        "NAME": os.environ.get("POSTGRES_DB"),       # <--- แก้ไขตรงนี้ (จาก POSTGRES_NAME)
         "USER": os.environ.get("POSTGRES_USER"),
-        "PASSWORD": os.environ.get("POSTGRES_PASSWORD"),
-        "HOST": "db",
+        "PASSWORD": os.environ.get("POSTGRES_PASSWORD"), # <--- ชื่อนี้ตรงกับใน .env ใหม่
+        "HOST": "db",  # HOST คือชื่อ service ของ database ใน docker-compose.yml
         "PORT": 5432,
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators

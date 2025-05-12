@@ -163,23 +163,27 @@ export default function OrderSummaryPage() {
                     fetch(`${getUserUrl()}/api/payment/`, { headers }),
                     fetch(`${getProductUrl()}/api/shipping/`, { headers }),
                 ]);
-                const { data: al = [] } = await ar.json();
-                const { data: pl = [] } = await pr.json();
+                const { data: addrlist = [] } = await ar.json();
+                const { data: paylist = [] } = await pr.json();
                 const sj = await sr.json();
                 const sl = Array.isArray(sj) ? sj : sj.data || [];
 
-                setAddresses(al);
-                setPayments(pl);
+                const sortedAddresses = [...addrlist].sort((a, b) => (b.is_default ? 1 : 0) - (a.is_default ? 1 : 0));
+                const sortedPayments = [...paylist].sort((a, b) => (b.is_default ? 1 : 0) - (a.is_default ? 1 : 0));
+
+                setAddresses(sortedAddresses);
+                setPayments(sortedPayments);
                 setShippings(sl);
 
-                if (al.length) setSelectedAddressId(al[0].id);
-                if (pl.length) setSelectedPaymentId(pl[0].id);
+                if (sortedAddresses.length) setSelectedAddressId(sortedAddresses[0].id);
+                if (sortedPayments.length) setSelectedPaymentId(sortedPayments[0].id);
                 if (sl.length) setSelectedShippingId(sl[0].id);
             } catch (e) {
                 console.error(e);
             }
         })();
     }, []);
+
 
     const removeItemFromCart = async (productId) => {
         try {
