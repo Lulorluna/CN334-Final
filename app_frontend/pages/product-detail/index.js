@@ -123,17 +123,18 @@ export default function ProductDetailPage() {
 
     if (loading) return <p className="p-6">Loading...</p>;
     if (error) return <p className="p-6 text-red-600">{error}</p>;
+    const fileName = product.name.toLowerCase().trim() + '.jpg';
 
     return (
         <div className="flex flex-col min-h-screen bg-cover bg-center" style={{ backgroundImage: "url('/images/bg.png')" }}>
             <header className="fixed top-0 w-full bg-[#fff8e1] shadow-md z-50">
                 <div className="container mx-auto flex items-center justify-between p-4">
                     <Link href="/" className="flex items-center gap-2 relative group">
-                        <Image src="/images/logo.png" width={40} height={40} alt="Logo" />
-                        <span className="font-bold text-[#8b4513] relative">
+                        <Image src="/images/logo.png" width={65} height={40} alt="Logo" />
+                        {/* <span className="font-bold text-[#8b4513] relative">
                             Meal of Hope
                             <span className="absolute left-0 bottom-0 w-0 h-[2px] bg-[#f4d03f] transition-all duration-300 group-hover:w-full"></span>
-                        </span>
+                            </span> */}
                     </Link>
                     <nav className="flex gap-6">
                         {['Home', 'About Us', 'Product'].map((text, idx) => {
@@ -208,8 +209,15 @@ export default function ProductDetailPage() {
 
             <main className="flex-grow pt-28 px-6">
                 <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-6 flex flex-col md:flex-row gap-6">
-                    <div className="flex justify-center items-center w-full md:w-1/2">
-                        <Image src={product.image || '/images/placeholder.png'} alt={product.name} width={300} height={300} className="rounded-lg" />
+                    <div className="relative w-full md:w-1/2 h-80 rounded-lg overflow-hidden">
+                        <Image
+                            src={`/images/${fileName}`}
+                            alt={product.name}
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 768px) 100vw, 50vw"
+                            priority
+                        />
                     </div>
                     <div className="flex flex-col space-y-4 w-full md:w-1/2">
                         <h2 className="text-2xl font-bold">{product.name}</h2>

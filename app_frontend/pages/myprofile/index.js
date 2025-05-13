@@ -49,6 +49,11 @@ export default function ProfilePage() {
             is_default: false
         }
     });
+    const [showChangePwd, setShowChangePwd] = useState(false);
+    const [pwdFields, setPwdFields] = useState({
+        newPassword: '',
+        confirmPassword: ''
+    });
     const [errors, setErrors] = useState({})
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [backgroundImage, setBackgroundImage] = useState('/images/bg1.jpeg');
@@ -205,6 +210,58 @@ export default function ProfilePage() {
                 .catch(err => console.error('Error fetching payment methods:', err));
         }
     }, [isLoggedIn, activeTab]);
+
+    const toggleChangePassword = () => {
+        setShowChangePwd(prev => !prev);
+        setPwdFields({ newPassword: '', confirmPassword: '' });
+        setErrors({});
+    };
+
+    const handlePwdChange = e => {
+        const { name, value } = e.target;
+        setPwdFields(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handlePasswordSubmit = async e => {
+        e.preventDefault();
+        setErrors({});
+
+        if (pwdFields.newPassword !== pwdFields.confirmPassword) {
+            setErrors({ confirm_password: ['รหัสผ่านทั้งสองช่องต้องตรงกัน'] });
+            return;
+        }
+
+        const token = localStorage.getItem('jwt_access');
+        try {
+            const res = await fetch(`${getUserUrl()}/api/change_password/`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    new_password: pwdFields.newPassword,
+                    confirm_password: pwdFields.confirmPassword,
+                }),
+            });
+
+            const data = await res.json();
+            console.log('change_password response:', data, 'status:', res.status);
+
+            if (!res.ok) {
+                setErrors(data);
+            } else {
+                alert('เปลี่ยนรหัสผ่านเรียบร้อยแล้ว');
+                setShowChangePwd(false);
+                setPwdFields({ newPassword: '', confirmPassword: '' });
+            }
+
+        } catch (err) {
+            console.error('Network or parsing error:', err);
+            alert('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+        }
+    };
+
 
 
     const handleChange = (e) => {
@@ -480,11 +537,7 @@ export default function ProfilePage() {
             <header className="fixed top-0 w-full bg-[#fff8e1] shadow-md z-50">
                 <div className="container mx-auto flex items-center justify-between p-4">
                     <Link href="/" className="flex items-center gap-2 relative group">
-                        <Image src="/images/logo.png" width={40} height={40} alt="Logo" />
-                        <span className="font-bold text-[#8b4513] relative">
-                            Meal of Hope
-                            <span className="absolute left-0 bottom-0 w-0 h-[2px] bg-[#f4d03f] transition-all duration-300 group-hover:w-full"></span>
-                        </span>
+                        <Image src="/images/logo.png" width={65} height={40} alt="Logo" />
                     </Link>
                     <nav className="flex gap-6">
                         {['Home', 'About Us', 'Product'].map((text, idx) => {
@@ -570,342 +623,418 @@ export default function ProfilePage() {
                             {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
                         </h1>
 
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                            {activeTab === 'account' && (
-                                <>
-                                    <div className="grid grid-cols-2 gap-6">
+                        {activeTab === 'account' && (
+                            <>
+                                {!showChangePwd && (
+                                    <form onSubmit={handleSubmit} className="space-y-6">
+                                        <div className="grid grid-cols-2 gap-6">
+                                            <div>
+                                                <label className="block text-sm font-medium text-[#8b4513] mb-2">
+                                                    Username *
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    name="username"
+                                                    value={formData.account.username}
+                                                    onChange={handleChange}
+                                                    required
+                                                    className="w-full p-3 border border-[#8b4513]/50 rounded-lg bg-[#fdf6e3] text-[#8b4513] focus:ring-[#f4d03f] focus:border-[#f4d03f]"
+                                                />
+                                                {errors.user?.username && (
+                                                    <p className="text-red-500 text-sm">{errors.user.username}</p>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-[#8b4513] mb-2">
+                                                    Telephone *
+                                                </label>
+                                                <input
+                                                    type="tel"
+                                                    name="tel"
+                                                    value={formData.account.tel}
+                                                    onChange={handleChange}
+                                                    required
+                                                    className="w-full p-3 border border-[#8b4513]/50 rounded-lg bg-[#fdf6e3] text-[#8b4513] focus:ring-[#f4d03f] focus:border-[#f4d03f]"
+                                                />
+                                                {errors.tel && <p className="text-red-500 text-sm">{errors.tel}</p>}
+                                            </div>
+                                        </div>
                                         <div>
                                             <label className="block text-sm font-medium text-[#8b4513] mb-2">
-                                                Username *
+                                                Fullname *
                                             </label>
                                             <input
                                                 type="text"
-                                                name="username"
-                                                value={formData.account.username}
+                                                name="fullname"
+                                                value={formData.account.fullname}
                                                 onChange={handleChange}
                                                 required
                                                 className="w-full p-3 border border-[#8b4513]/50 rounded-lg bg-[#fdf6e3] text-[#8b4513] focus:ring-[#f4d03f] focus:border-[#f4d03f]"
                                             />
-                                            {errors.user?.username && <p className="text-red-500">{errors.user.username}</p>}
+                                            {errors.fullname && (
+                                                <p className="text-red-500 text-sm">{errors.fullname}</p>
+                                            )}
                                         </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-[#8b4513] mb-2">
-                                                Telephone *
-                                            </label>
-                                            <input
-                                                type="tel"
-                                                name="telephone"
-                                                value={formData.account.tel}
-                                                onChange={handleChange}
-                                                required
-                                                className="w-full p-3 border border-[#8b4513]/50 rounded-lg bg-[#fdf6e3] text-[#8b4513] focus:ring-[#f4d03f] focus:border-[#f4d03f]"
-                                            />
-                                            {errors.tel && <p className="text-red-500">{errors.tel}</p>}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-[#8b4513] mb-2">
-                                            Fullname *
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="fullname"
-                                            value={formData.account.fullname}
-                                            onChange={handleChange}
-                                            required
-                                            className="w-full p-3 border border-[#8b4513]/50 rounded-lg bg-[#fdf6e3] text-[#8b4513] focus:ring-[#f4d03f] focus:border-[#f4d03f]"
-                                        />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-6">
-                                        <div>
-                                            <label className="block text-sm font-medium text-[#8b4513] mb-2">
-                                                Date of Birth *
-                                            </label>
-                                            <input
-                                                type="date"
-                                                name="date_of_birth"
-                                                value={formData.account.date_of_birth}
-                                                onChange={handleChange}
-                                                required
-                                                className="w-full p-3 border border-[#8b4513]/50 rounded-lg bg-[#fdf6e3] text-[#8b4513] focus:ring-[#f4d03f] focus:border-[#f4d03f]"
-                                            />
-                                            {errors.date_of_birth && <p className="text-red-500">{errors.date_of_birth}</p>}
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-[#8b4513] mb-2">
-                                                Sex *
-                                            </label>
-                                            <select
-                                                name="sex"
-                                                value={formData.account.sex}
-                                                onChange={handleChange}
-                                                required
-                                                className="w-full p-3 border border-[#8b4513]/50 rounded-lg bg-[#fdf6e3] text-[#8b4513] focus:ring-[#f4d03f] focus:border-[#f4d03f]"
-                                            >
-                                                <option value="Male">Male</option>
-                                                <option value="Female">Female</option>
-                                                <option value="Other">Other</option>
-                                            </select>
-                                            {errors.sex && <p className="text-red-500">{errors.sex}</p>}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-[#8b4513] mb-2">
-                                            Email *
-                                        </label>
-                                        <input
-                                            type="email"
-                                            name="email"
-                                            value={formData.account.email}
-                                            onChange={handleChange}
-                                            required
-                                            className="w-full p-3 border border-[#8b4513]/50 rounded-lg bg-[#fdf6e3] text-[#8b4513] focus:ring-[#f4d03f] focus:border-[#f4d03f]"
-                                        />
-                                    </div>
-                                    <div className="text-right">
-                                        <Link
-                                            href="/change-password"
-                                            className="text-[#8b4513] hover:text-[#f4d03f] transition-colors duration-200"
-                                        >
-                                            Change Password
-                                        </Link>
-                                    </div>
-                                    <div className="text-right">
-                                        <button
-                                            type="submit"
-                                            className="bg-[#f4d03f] text-[#8b4513] px-6 py-3 rounded-lg hover:bg-[#e6c02f] transition-colors duration-200 font-semibold"
-                                        >
-                                            Save
-                                        </button>
-                                    </div>
-                                </>
-                            )}
-
-                            {activeTab === 'address' && (
-                                <div>
-                                    {!showNewAddressForm ? (
-                                        <div className="space-y-3">
-                                            {addressList.map(addr => (
-                                                <label
-                                                    key={addr.id}
-                                                    className="flex items-center space-x-2 p-3 border border-[#8b4513]/50 rounded-lg bg-[#fdf6e3]"
-                                                >
-                                                    <input
-                                                        type="radio"
-                                                        name="defaultAddress"
-                                                        value={addr.id}
-                                                        checked={defaultAddressId === addr.id}
-                                                        onChange={() => handleDefaultAddress(addr.id)}
-                                                        className="accent-[#8b4513]"
-                                                    />
-                                                    <div className="text-[#8b4513]">
-                                                        <p className="font-semibold">{addr.receiver_name}</p>
-                                                        <p className="text-sm">
-                                                            {addr.house_number}, {addr.district}, {addr.province} {addr.post_code}
-                                                        </p>
-                                                        {addr.is_default && <span className="text-xs text-green-700">Default</span>}
-                                                    </div>
+                                        <div className="grid grid-cols-2 gap-6">
+                                            <div>
+                                                <label className="block text-sm font-medium text-[#8b4513] mb-2">
+                                                    Date of Birth *
                                                 </label>
-                                            ))}
-
-                                            <div className="text-left mt-4">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowNewAddressForm(true)}
-                                                    className="px-6 py-2 bg-[#f4d03f] text-[#8b4513] rounded-lg hover:bg-[#e6c02f] transition-colors duration-200 font-semibold"
-                                                >
-                                                    + Add Address
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-4 p-4 mt-4 border border-[#8b4513]/50 rounded-lg bg-[#fdf6e3]">
-                                            {['receiver_name', 'house_number', 'district', 'province', 'post_code'].map(field => (
-                                                <div key={field}>
-                                                    <label className="block text-sm font-medium text-[#8b4513] mb-2 capitalize">
-                                                        {field.replace('_', ' ')} *
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        name={field}
-                                                        required
-                                                        value={formData.address[field]}
-                                                        onChange={handleChange}
-                                                        className="w-full p-3 border border-[#8b4513]/50 rounded-lg bg-white text-[#8b4513] focus:ring-[#f4d03f] focus:border-[#f4d03f]"
-                                                    />
-                                                </div>
-                                            ))}
-                                            <div className="flex items-center space-x-2">
                                                 <input
-                                                    type="checkbox"
-                                                    name="is_default"
-                                                    checked={formData.address.is_default || false}
-                                                    onChange={e =>
-                                                        setFormData(prev => ({
-                                                            ...prev,
-                                                            address: { ...prev.address, is_default: e.target.checked },
-                                                        }))
-                                                    }
-                                                    className="accent-[#8b4513]"
-                                                />
-                                                <label className="text-[#8b4513]">Set as default</label>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowNewAddressForm(false)}
-                                                    className="bg-[#f4d03f] text-[#8b4513] px-6 py-3 rounded-lg hover:bg-[#e6c02f] transition-colors duration-200 font-semibold"
-                                                >
-                                                    Cancel
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={handleAddressSubmit}
-                                                    className="bg-[#f4d03f] text-[#8b4513] px-6 py-3 rounded-lg hover:bg-[#e6c02f] transition-colors duration-200 font-semibold"
-                                                >
-                                                    Save Address
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {activeTab === 'history' && (
-                                <>
-                                    <div className="space-y-4">
-                                        {historyList.filter(order => order.items.length > 0).length === 0 ? (
-                                            <p className="text-gray-500">ยังไม่มีรายการสั่งซื้อ</p>
-                                        ) : (
-                                            historyList
-                                                .filter(order => order.items.length > 0)
-                                                .map(order => (
-                                                    <div key={order.id} className="p-4 border rounded-lg bg-white">
-                                                        <div className="flex justify-between items-center mb-2">
-                                                            <span className="font-semibold">Order #{order.id}</span>
-                                                            <span
-                                                                className={`text-sm px-2 py-1 rounded-full ${STATUS_BADGE_CLASSES[order.status] || 'bg-gray-200 text-gray-800'
-                                                                    }`}
-                                                            >
-                                                                {order.status}
-                                                            </span>
-                                                        </div>
-                                                        <div className="mb-2">
-                                                            <span className="font-medium">Total:</span> ฿{order.total_price}
-                                                        </div>
-                                                        <div className="space-y-1">
-                                                            {order.items.map(item => (
-                                                                <div key={item.id} className="flex justify-between">
-                                                                    <span>{item.product_name} x{item.quantity}</span>
-                                                                    <span>฿{item.total_price}</span>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                        <Link href={`/summarize/${order.id}`}
-                                                            className="inline-block mt-3 text-sm text-[#8b4513] hover:underline">
-                                                            ดูรายละเอียดเพิ่มเติม →
-                                                        </Link>
-                                                    </div>
-                                                ))
-                                        )}
-                                    </div>
-                                </>
-                            )}
-
-                            {activeTab === 'payment' && (
-                                <div>
-                                    {!showNewPaymentForm ? (
-                                        <div className="space-y-3">
-                                            {paymentList.map(pm => (
-                                                <label
-                                                    key={pm.id}
-                                                    className="flex items-center space-x-2 p-3 border border-[#8b4513]/50 rounded-lg bg-[#fdf6e3]"
-                                                >
-                                                    <input
-                                                        type="radio"
-                                                        name="defaultPayment"
-                                                        value={pm.id}
-                                                        checked={defaultPaymentId === pm.id}
-                                                        onChange={() => handleDefaultPayment(pm.id)}
-                                                        className="accent-[#8b4513]"
-                                                    />
-                                                    <div className="text-[#8b4513]">
-                                                        <p className="font-semibold">{pm.method}</p>
-                                                        <p className="text-sm">
-                                                            •••• •••• •••• {pm.card_no.slice(-4)}
-                                                        </p>
-                                                        {pm.is_default && <span className="text-xs text-green-700">Default</span>}
-                                                    </div>
-                                                </label>
-                                            ))}
-
-                                            <div className="text-left mt-4">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowNewPaymentForm(true)}
-                                                    className="px-6 py-2 bg-[#f4d03f] text-[#8b4513] rounded-lg hover:bg-[#e6c02f] transition-colors duration-200 font-semibold"
-                                                >
-                                                    + Add Payment Method
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-4 p-4 mt-4 border border-[#8b4513]/50 rounded-lg bg-[#fdf6e3]">
-                                            {['method', 'card_no', 'expired', 'holder_name'].map(field => (
-                                                <div key={field}>
-                                                    <label className="block text-sm font-medium text-[#8b4513] mb-2 capitalize">
-                                                        {field === 'method'
-                                                            ? 'Payment Method'
-                                                            : field === 'card_no'
-                                                                ? 'Card Number'
-                                                                : field === 'expired'
-                                                                    ? 'Expiration (MM/YY)'
-                                                                    : 'Cardholder Name'} *
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        name={field}
-                                                        required
-                                                        value={formData.payment[field]}
-                                                        onChange={handleChange}
-                                                        className="w-full p-3 border border-[#8b4513]/50 rounded-lg bg-white text-[#8b4513] focus:ring-[#f4d03f] focus:border-[#f4d03f]"
-                                                        maxLength={16}
-                                                    />
-                                                </div>
-                                            ))}
-
-                                            <div className="flex items-center space-x-2">
-                                                <input
-                                                    type="checkbox"
-                                                    name="is_default"
-                                                    checked={formData.payment.is_default}
+                                                    type="date"
+                                                    name="date_of_birth"
+                                                    value={formData.account.date_of_birth}
                                                     onChange={handleChange}
-                                                    className="accent-[#8b4513]"
+                                                    required
+                                                    className="w-full p-3 border border-[#8b4513]/50 rounded-lg bg-[#fdf6e3] text-[#8b4513] focus:ring-[#f4d03f] focus:border-[#f4d03f]"
                                                 />
-                                                <label className="text-[#8b4513]">Set as default</label>
+                                                {errors.date_of_birth && (
+                                                    <p className="text-red-500 text-sm">{errors.date_of_birth}</p>
+                                                )}
                                             </div>
-
-                                            <div className="flex justify-between">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowNewPaymentForm(false)}
-                                                    className="bg-[#f4d03f] text-[#8b4513] px-6 py-3 rounded-lg hover:bg-[#e6c02f] transition-colors duration-200 font-semibold"
+                                            <div>
+                                                <label className="block text-sm font-medium text-[#8b4513] mb-2">
+                                                    Sex *
+                                                </label>
+                                                <select
+                                                    name="sex"
+                                                    value={formData.account.sex}
+                                                    onChange={handleChange}
+                                                    required
+                                                    className="w-full p-3 border border-[#8b4513]/50 rounded-lg bg-[#fdf6e3] text-[#8b4513] focus:ring-[#f4d03f] focus:border-[#f4d03f]"
                                                 >
-                                                    Cancel
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={handlePaymentSubmit}
-                                                    className="bg-[#f4d03f] text-[#8b4513] px-6 py-3 rounded-lg hover:bg-[#e6c02f] transition-colors duration-200 font-semibold"
-                                                >
-                                                    Save Payment Method
-                                                </button>
+                                                    <option value="Male">Male</option>
+                                                    <option value="Female">Female</option>
+                                                    <option value="Other">Other</option>
+                                                </select>
+                                                {errors.sex && (
+                                                    <p className="text-red-500 text-sm">{errors.sex}</p>
+                                                )}
                                             </div>
                                         </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-[#8b4513] mb-2">
+                                                Email *
+                                            </label>
+                                            <input
+                                                type="email"
+                                                name="email"
+                                                value={formData.account.email}
+                                                onChange={handleChange}
+                                                required
+                                                className="w-full p-3 border border-[#8b4513]/50 rounded-lg bg-[#fdf6e3] text-[#8b4513] focus:ring-[#f4d03f] focus:border-[#f4d03f]"
+                                            />
+                                            {errors.user?.email && (
+                                                <p className="text-red-500 text-sm">{errors.user.email}</p>
+                                            )}
+                                        </div>
+                                        <div className="text-right mb-4">
+                                            <button
+                                                type="button"
+                                                onClick={toggleChangePassword}
+                                                className="text-sm text-[#8b4513] hover:text-[#f4d03f] transition-colors duration-200"
+                                            >
+                                                Change Password
+                                            </button>
+                                        </div>
+                                        <div className="text-right">
+                                            <button
+                                                type="submit"
+                                                className="bg-[#f4d03f] text-[#8b4513] px-6 py-3 rounded-lg hover:bg-[#e6c02f] transition-colors duration-200 font-semibold"
+                                            >
+                                                Save
+                                            </button>
+                                        </div>
+                                    </form>
+                                )}
+                                {showChangePwd && (
+                                    <form onSubmit={handlePasswordSubmit} className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-[#8b4513] mb-1">
+                                                New Password *
+                                            </label>
+                                            {errors.non_field_errors?.length > 0 && (
+                                                <div className="bg-red-100 border border-red-300 text-red-800 p-3 rounded mb-2">
+                                                    {errors.non_field_errors.map((msg, i) => (
+                                                        <p key={i} className="text-sm">{msg}</p>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            <input
+                                                type="password"
+                                                name="newPassword"
+                                                value={pwdFields.newPassword}
+                                                onChange={handlePwdChange}
+                                                required
+                                                className="w-full p-3 border border-[#8b4513]/50 rounded-lg bg-[#fdf6e3]"
+                                            />
+                                            {errors.new_password?.map((msg, idx) => (
+                                                <p key={idx} className="text-red-500 text-sm mt-1">{msg}</p>
+                                            ))}
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-[#8b4513] mb-1">
+                                                Confirm New Password *
+                                            </label>
+                                            <input
+                                                type="password"
+                                                name="confirmPassword"
+                                                value={pwdFields.confirmPassword}
+                                                onChange={handlePwdChange}
+                                                required
+                                                className="w-full p-3 border border-[#8b4513]/50 rounded-lg bg-[#fdf6e3]"
+                                            />
+                                            {errors.confirm_password?.map((msg, idx) => (
+                                                <p key={idx} className="text-red-500 text-sm mt-1">{msg}</p>
+                                            ))}
+                                        </div>
+                                        <div className="text-right mb-4">
+                                            <button
+                                                type="button"
+                                                onClick={toggleChangePassword}
+                                                className="text-sm text-[#8b4513] hover:text-[#f4d03f] transition-colors duration-200"
+                                            >
+                                                Cancel Change Password
+                                            </button>
+                                        </div>
+                                        <div className="text-right">
+                                            <button
+                                                type="submit"
+                                                className="bg-[#f4d03f] text-[#8b4513] px-6 py-3 rounded-lg hover:bg-[#e6c02f] transition-colors duration-200 font-semibold"
+                                            >
+                                                Change Password
+                                            </button>
+                                        </div>
+                                    </form>
+                                )}
+                            </>
+                        )}
+
+
+                        {activeTab === 'address' && (
+                            <div>
+                                {!showNewAddressForm ? (
+                                    <div className="space-y-3">
+                                        {addressList.map(addr => (
+                                            <label
+                                                key={addr.id}
+                                                className="flex items-center space-x-2 p-3 border border-[#8b4513]/50 rounded-lg bg-[#fdf6e3]"
+                                            >
+                                                <input
+                                                    type="radio"
+                                                    name="defaultAddress"
+                                                    value={addr.id}
+                                                    checked={defaultAddressId === addr.id}
+                                                    onChange={() => handleDefaultAddress(addr.id)}
+                                                    className="accent-[#8b4513]"
+                                                />
+                                                <div className="text-[#8b4513]">
+                                                    <p className="font-semibold">{addr.receiver_name}</p>
+                                                    <p className="text-sm">
+                                                        {addr.house_number}, {addr.district}, {addr.province} {addr.post_code}
+                                                    </p>
+                                                    {addr.is_default && <span className="text-xs text-green-700">Default</span>}
+                                                </div>
+                                            </label>
+                                        ))}
+
+                                        <div className="text-left mt-4">
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowNewAddressForm(true)}
+                                                className="px-6 py-2 bg-[#f4d03f] text-[#8b4513] rounded-lg hover:bg-[#e6c02f] transition-colors duration-200 font-semibold"
+                                            >
+                                                + Add Address
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4 p-4 mt-4 border border-[#8b4513]/50 rounded-lg bg-[#fdf6e3]">
+                                        {['receiver_name', 'house_number', 'district', 'province', 'post_code'].map(field => (
+                                            <div key={field}>
+                                                <label className="block text-sm font-medium text-[#8b4513] mb-2 capitalize">
+                                                    {field.replace('_', ' ')} *
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    name={field}
+                                                    required
+                                                    value={formData.address[field]}
+                                                    onChange={handleChange}
+                                                    className="w-full p-3 border border-[#8b4513]/50 rounded-lg bg-white text-[#8b4513] focus:ring-[#f4d03f] focus:border-[#f4d03f]"
+                                                />
+                                            </div>
+                                        ))}
+                                        <div className="flex items-center space-x-2">
+                                            <input
+                                                type="checkbox"
+                                                name="is_default"
+                                                checked={formData.address.is_default || false}
+                                                onChange={e =>
+                                                    setFormData(prev => ({
+                                                        ...prev,
+                                                        address: { ...prev.address, is_default: e.target.checked },
+                                                    }))
+                                                }
+                                                className="accent-[#8b4513]"
+                                            />
+                                            <label className="text-[#8b4513]">Set as default</label>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowNewAddressForm(false)}
+                                                className="bg-[#f4d03f] text-[#8b4513] px-6 py-3 rounded-lg hover:bg-[#e6c02f] transition-colors duration-200 font-semibold"
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={handleAddressSubmit}
+                                                className="bg-[#f4d03f] text-[#8b4513] px-6 py-3 rounded-lg hover:bg-[#e6c02f] transition-colors duration-200 font-semibold"
+                                            >
+                                                Save Address
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {activeTab === 'history' && (
+                            <>
+                                <div className="space-y-4">
+                                    {historyList.filter(order => order.items.length > 0).length === 0 ? (
+                                        <p className="text-gray-500">ยังไม่มีรายการสั่งซื้อ</p>
+                                    ) : (
+                                        historyList
+                                            .filter(order => order.items.length > 0)
+                                            .map(order => (
+                                                <div key={order.id} className="p-4 border rounded-lg bg-white">
+                                                    <div className="flex justify-between items-center mb-2">
+                                                        <span className="font-semibold">Order #{order.id}</span>
+                                                        <span
+                                                            className={`text-sm px-2 py-1 rounded-full ${STATUS_BADGE_CLASSES[order.status] || 'bg-gray-200 text-gray-800'
+                                                                }`}
+                                                        >
+                                                            {order.status}
+                                                        </span>
+                                                    </div>
+                                                    <div className="mb-2">
+                                                        <span className="font-medium">Total:</span> ฿{order.total_price}
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        {order.items.map(item => (
+                                                            <div key={item.id} className="flex justify-between">
+                                                                <span>{item.product_name} x{item.quantity}</span>
+                                                                <span>฿{item.total_price}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    <Link href={`/summarize/${order.id}`}
+                                                        className="inline-block mt-3 text-sm text-[#8b4513] hover:underline">
+                                                        ดูรายละเอียดเพิ่มเติม →
+                                                    </Link>
+                                                </div>
+                                            ))
                                     )}
                                 </div>
-                            )}
-                        </form>
+                            </>
+                        )}
+
+                        {activeTab === 'payment' && (
+                            <div>
+                                {!showNewPaymentForm ? (
+                                    <div className="space-y-3">
+                                        {paymentList.map(pm => (
+                                            <label
+                                                key={pm.id}
+                                                className="flex items-center space-x-2 p-3 border border-[#8b4513]/50 rounded-lg bg-[#fdf6e3]"
+                                            >
+                                                <input
+                                                    type="radio"
+                                                    name="defaultPayment"
+                                                    value={pm.id}
+                                                    checked={defaultPaymentId === pm.id}
+                                                    onChange={() => handleDefaultPayment(pm.id)}
+                                                    className="accent-[#8b4513]"
+                                                />
+                                                <div className="text-[#8b4513]">
+                                                    <p className="font-semibold">{pm.method}</p>
+                                                    <p className="text-sm">
+                                                        •••• •••• •••• {pm.card_no.slice(-4)}
+                                                    </p>
+                                                    {pm.is_default && <span className="text-xs text-green-700">Default</span>}
+                                                </div>
+                                            </label>
+                                        ))}
+
+                                        <div className="text-left mt-4">
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowNewPaymentForm(true)}
+                                                className="px-6 py-2 bg-[#f4d03f] text-[#8b4513] rounded-lg hover:bg-[#e6c02f] transition-colors duration-200 font-semibold"
+                                            >
+                                                + Add Payment Method
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4 p-4 mt-4 border border-[#8b4513]/50 rounded-lg bg-[#fdf6e3]">
+                                        {['method', 'card_no', 'expired', 'holder_name'].map(field => (
+                                            <div key={field}>
+                                                <label className="block text-sm font-medium text-[#8b4513] mb-2 capitalize">
+                                                    {field === 'method'
+                                                        ? 'Payment Method'
+                                                        : field === 'card_no'
+                                                            ? 'Card Number'
+                                                            : field === 'expired'
+                                                                ? 'Expiration (MM/YY)'
+                                                                : 'Cardholder Name'} *
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    name={field}
+                                                    required
+                                                    value={formData.payment[field]}
+                                                    onChange={handleChange}
+                                                    className="w-full p-3 border border-[#8b4513]/50 rounded-lg bg-white text-[#8b4513] focus:ring-[#f4d03f] focus:border-[#f4d03f]"
+                                                    maxLength={16}
+                                                />
+                                            </div>
+                                        ))}
+
+                                        <div className="flex items-center space-x-2">
+                                            <input
+                                                type="checkbox"
+                                                name="is_default"
+                                                checked={formData.payment.is_default}
+                                                onChange={handleChange}
+                                                className="accent-[#8b4513]"
+                                            />
+                                            <label className="text-[#8b4513]">Set as default</label>
+                                        </div>
+
+                                        <div className="flex justify-between">
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowNewPaymentForm(false)}
+                                                className="bg-[#f4d03f] text-[#8b4513] px-6 py-3 rounded-lg hover:bg-[#e6c02f] transition-colors duration-200 font-semibold"
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={handlePaymentSubmit}
+                                                className="bg-[#f4d03f] text-[#8b4513] px-6 py-3 rounded-lg hover:bg-[#e6c02f] transition-colors duration-200 font-semibold"
+                                            >
+                                                Save Payment Method
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </main>
             </div>

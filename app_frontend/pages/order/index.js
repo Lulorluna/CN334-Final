@@ -139,14 +139,22 @@ export default function OrderSummaryPage() {
                             .then(json => json)
                     )
                 );
-                const enriched = details.map((p, i) => ({
-                    id: p.data.id,
-                    name: p.data.name,
-                    image: p.data.image || '/images/placeholder.png',
-                    price: Number(p.data.price) || 0,
-                    quantity: cart[i].quantity,
-                    stock: p.data.stock || 0,
-                }));
+                const enriched = details.map((p, i) => {
+                    const fileName =
+                        p.data.name
+                            .toLowerCase()
+                            .trim()
+                        + '.jpg';
+
+                    return {
+                        id: p.data.id,
+                        name: p.data.name,
+                        image: `/images/${fileName}`,
+                        price: Number(p.data.price) || 0,
+                        quantity: cart[i].quantity,
+                        stock: p.data.stock || 0,
+                    };
+                });
                 setFullProducts(enriched);
             } catch (e) {
                 console.error(e);
@@ -304,11 +312,7 @@ export default function OrderSummaryPage() {
             <header className="fixed top-0 w-full bg-[#fff8e1] shadow-md z-50">
                 <div className="container mx-auto flex items-center justify-between p-4">
                     <Link href="/" className="flex items-center gap-2 relative group">
-                        <Image src="/images/logo.png" width={40} height={40} alt="Logo" />
-                        <span className="font-bold text-[#8b4513] relative">
-                            Meal of Hope
-                            <span className="absolute left-0 bottom-0 w-0 h-[2px] bg-[#f4d03f] transition-all duration-300 group-hover:w-full"></span>
-                        </span>
+                        <Image src="/images/logo.png" width={65} height={40} alt="Logo" />
                     </Link>
                     <nav className="flex gap-6">
                         {['Home', 'About Us', 'Product'].map((text, idx) => {
@@ -508,7 +512,7 @@ export default function OrderSummaryPage() {
                     {paymentMethod === 'qr_code' && (
                         <div className="mb-6 flex flex-col items-center">
                             <Image
-                                src="/images/placeholder-qr.png"
+                                src="/images/qrcode.jpg"
                                 alt="QR Code"
                                 width={200}
                                 height={200}

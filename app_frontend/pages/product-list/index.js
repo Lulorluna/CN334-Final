@@ -162,11 +162,11 @@ export default function ProductListPage() {
             <header className="fixed top-0 w-full bg-[#fff8e1] shadow-md z-50">
                 <div className="container mx-auto flex items-center justify-between p-4">
                     <Link href="/" className="flex items-center gap-2 relative group">
-                        <Image src="/images/logo.png" width={40} height={40} alt="Logo" />
-                        <span className="font-bold text-[#8b4513] relative">
+                        <Image src="/images/logo.png" width={65} height={40} alt="Logo" />
+                        {/* <span className="font-bold text-[#8b4513] relative">
                             Meal of Hope
                             <span className="absolute left-0 bottom-0 w-0 h-[2px] bg-[#f4d03f] transition-all duration-300 group-hover:w-full"></span>
-                        </span>
+                            </span> */}
                     </Link>
                     <nav className="flex gap-6">
                         {['Home', 'About Us', 'Product'].map((text, idx) => {
@@ -257,7 +257,7 @@ export default function ProductListPage() {
                     <div className="flex flex-col gap-2">
                         {categories.map((cat, idx) => (
                             <button key={idx} onClick={() => setSelectedCategory(cat.label)} className={`flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium transition ${selectedCategory === cat.label ? 'bg-yellow-400 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
-                                <Image src={cat.icon} alt={cat.label} width={20} height={20} />{cat.label}
+                                <Image src={cat.icon} alt={cat.label} width={20} height={20} sizes="20px" style={{ width: '20px', height: '20px' }} />{cat.label}
                             </button>
                         ))}
                         {selectedCategory && <button onClick={() => setSelectedCategory(null)} className="mt-3 text-red-600 text-sm hover:underline">ล้างการเลือก</button>}
@@ -268,25 +268,43 @@ export default function ProductListPage() {
                         <div className="text-center text-gray-500 mt-10">กำลังโหลดสินค้า...</div>
                     ) : filteredProducts.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {filteredProducts.map(item => (
-                                <div key={item.id} className="bg-white rounded-xl shadow hover:shadow-lg transition p-4 flex flex-col justify-between">
-                                    <div className="flex justify-center items-center h-32">
-                                        <Image src={item.image || '/images/placeholder.png'} alt={item.name} width={100} height={100} className="object-contain" />
-                                    </div>
-                                    <div className="mt-4 flex justify-between items-center">
-                                        <h3 className="text-gray-800 font-semibold text-md">{item.name}</h3>
-                                        <span className="text-sm text-gray-500">Expire: {new Date(item.expiration_date).toLocaleDateString()}</span>
-                                    </div>
-                                    <p className="text-sm text-gray-600 mt-1">{item.detail}</p>
-                                    <p className="font-bold text-yellow-500 mt-2">฿ {item.price.toLocaleString()}</p>
-                                    <Link
-                                        href={`/product-detail?product=${item.id}`}
-                                        className="mt-4 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-full text-center"
+                            {filteredProducts.map((item, index) => {
+                                const fileName = item.name.toLowerCase().trim() + '.jpg';
+                                return (
+                                    <div
+                                        key={item.id}
+                                        className="bg-white rounded-xl shadow hover:shadow-lg transition p-4 flex flex-col justify-between"
                                     >
-                                        เลือกซื้อสินค้า
-                                    </Link>
-                                </div>
-                            ))}
+                                        <div className="relative w-full h-48">
+                                            <Image
+                                                src={`/images/${fileName}`}
+                                                alt={item.name}
+                                                fill
+                                                className="object-cover"
+                                                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                                priority={index === 0}
+                                            />
+                                        </div>
+
+                                        <div className="mt-4 flex justify-between items-center">
+                                            <h3 className="text-gray-800 font-semibold text-md">{item.name}</h3>
+                                            <span className="text-sm text-gray-500">
+                                                Expire: {new Date(item.expiration_date).toLocaleDateString()}
+                                            </span>
+                                        </div>
+                                        <p className="text-sm text-gray-600 mt-1">{item.detail}</p>
+                                        <p className="font-bold text-yellow-500 mt-2">
+                                            ฿ {item.price.toLocaleString()}
+                                        </p>
+                                        <Link
+                                            href={`/product-detail?product=${item.id}`}
+                                            className="mt-4 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-full text-center"
+                                        >
+                                            เลือกซื้อสินค้า
+                                        </Link>
+                                    </div>
+                                );
+                            })}
                         </div>
                     ) : (
                         <div className="text-center text-gray-500 mt-10">ไม่พบสินค้าที่ตรงกับคำค้นหา หมวดหมู่ หรือสินค้าหมด</div>

@@ -2,6 +2,7 @@ import re
 from rest_framework import serializers
 from user_management.models import *
 from django.utils.html import strip_tags
+from django.contrib.auth import password_validation
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -59,3 +60,18 @@ class AddressSerializer(serializers.ModelSerializer):
             "post_code",
             "is_default",
         ]
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    new_password = serializers.CharField(write_only=True, min_length=8)
+    confirm_password = serializers.CharField(write_only=True, min_length=8)
+
+    def validate(self, attrs):
+        pw1 = attrs.get("new_password")
+        pw2 = attrs.get("confirm_password")
+        if pw1 != pw2:
+            raise serializers.ValidationError(
+                {"confirm_password": "รหัสผ่านทั้งสองช่องต้องตรงกัน"}
+            )
+        password_validation.validate_password(pw1, self.context["request"].user)
+        return attrs

@@ -68,13 +68,13 @@ export default function HomePage() {
     { label: 'Raw', icon: '/icons/raw.png', href: '/product-list?category=Raw' },
     { label: 'Vegetable', icon: '/icons/vegetable.png', href: '/product-list?category=Vegetable' },
     { label: 'Fruit', icon: '/icons/fruit.png', href: '/product-list?category=Fruit' },
-    { label: 'Seasoning', icon: '/icons/seasoning.png', href: '/product-list?category=Seasoning' },
-    { label: 'RTE Food', icon: '/icons/rte.png', href: '/product-list?category=RTE%20Food' },
+    { label: 'Fish', icon: '/icons/fish.png', href: '/product-list?category=Fish' },
+    { label: 'Other', icon: '/icons/other.png', href: '/product-list?category=Other' },
   ];
 
   const promotions = [
-    { title: 'Ready to Eat', img: '/images/rte.jpg' },
-    { title: 'Drink', img: '/images/drink.jpg' },
+    { title: 'Meat', img: '/images/meat.jpg' },
+    { title: 'Drink', img: '/images/drinks.jpg' },
     { title: 'Fresh Food', img: '/images/fresh.jpg' },
   ];
 
@@ -83,11 +83,8 @@ export default function HomePage() {
       <header className="fixed top-0 w-full bg-[#fff8e1] shadow-md z-50">
         <div className="container mx-auto flex items-center justify-between p-4">
           <Link href="/" className="flex items-center gap-2 relative group">
-            <Image src="/images/logo.png" width={40} height={40} alt="Logo" />
-            <span className="font-bold text-[#8b4513] relative">
-              Meal of Hope
-              <span className="absolute left-0 bottom-0 w-0 h-[2px] bg-[#f4d03f] transition-all duration-300 group-hover:w-full"></span>
-            </span>
+            <Image src="/images/logo.png" width={70} height={40} alt="Logo" />
+
           </Link>
           <nav className="flex gap-6">
             {['Home', 'About Us', 'Product'].map((text, idx) => {
@@ -161,18 +158,33 @@ export default function HomePage() {
       <div className="h-20" />
 
       <section className="relative h-[600px] w-full">
-        <Image src="/images/banner.jpg" alt="Banner" fill className="object-cover" />
+        <Image src="/images/banner4.jpg" alt="Banner" fill className="object-cover" />
       </section>
 
       <section className="container mx-auto px-4 mt-10">
         <h3 className="text-2xl font-bold mb-6">Promotion</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {promotions.map((promo, idx) => (
-            <div key={idx} className="rounded-lg overflow-hidden shadow hover:shadow-md transition-shadow duration-200">
-              <Image src={promo.img} alt={promo.title} width={400} height={250} className="w-full h-auto" />
-              <div className="p-4 text-center">
-                <div className="font-bold">Category</div>
-                <div>{promo.title}</div>
+            <div
+              key={idx}
+              className="
+                relative w-full h-80 rounded-lg overflow-hidden
+                shadow-md hover:shadow-lg
+                transform transition-transform duration-300 ease-in-out
+                hover:scale-105 hover:-translate-y-2
+                "
+            >
+              <Image
+                src={promo.img}
+                alt={promo.title}
+                fill
+                className="object-cover"
+              />
+              <div className="absolute top-2 left-2 bg-black bg-opacity-60 text-white text-xs font-semibold py-1 px-2 rounded">
+                Promotions
+              </div>
+              <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-60 text-white text-sm font-bold py-1 px-3 rounded">
+                {promo.title}
               </div>
             </div>
           ))}
