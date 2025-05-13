@@ -1,6 +1,5 @@
 services:
   # Frontend Service
-  services:
   - type: web
     name: cn334-frontend
     env: node
