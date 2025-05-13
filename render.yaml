@@ -7,8 +7,6 @@ services:
     rootDir: app_frontend
     buildCommand: |
       npm install
-      npm install --save-dev eslint tailwindcss postcss autoprefixer
-      npm install --save-dev @types/node @types/react @types/react-dom typescript
       npx tailwindcss init -p
       npm run build
     startCommand: npm start
