@@ -5,7 +5,7 @@ services:
     env: node
     region: singapore
     rootDir: app_frontend
-    buildCommand: npm install && npm run build
+    buildCommand: npm install && npm install --save-dev eslint tailwindcss postcss autoprefixer && npm run build
     startCommand: npm start
     plan: free
     envVars:
@@ -22,6 +22,7 @@ services:
     env: docker
     region: singapore
     dockerfilePath: ./user_service/Dockerfile
+    dockerContext: ./user_service
     plan: free
     envVars:
       - key: PYTHONUNBUFFERED
@@ -43,6 +44,7 @@ services:
     env: docker
     region: singapore
     dockerfilePath: ./product_service/Dockerfile
+    dockerContext: ./product_service
     plan: free
     envVars:
       - key: PYTHONUNBUFFERED
@@ -63,7 +65,8 @@ services:
     name: cn334-app
     env: docker
     region: singapore
-    dockerfilePath: ./Dockerfile
+    dockerfilePath: ./app_frontend/Dockerfile
+    dockerContext: ./app_frontend
     plan: free
     envVars:
       - key: NODE_ENV
