@@ -1,11 +1,13 @@
 services:
   # Frontend Service
+  services:
   - type: web
     name: cn334-frontend
     env: node
     region: singapore
     rootDir: app_frontend
-    buildCommand: npm install && npm run build
+    # แก้ไข buildCommand เป็นอันนี้:
+    buildCommand: npm install --production=false && npm run build
     startCommand: npm start
     plan: free
     envVars:
