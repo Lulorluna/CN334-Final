@@ -195,3 +195,20 @@ class PaymentMethodDetailView(APIView):
             return Response(status=404)
         pm.delete()
         return Response(status=204)
+
+
+class ChangePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, *args, **kwargs):
+        serializer = ChangePasswordSerializer(
+            data=request.data, context={"request": request}
+        )
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=400)
+
+        user = request.user
+        user.set_password(serializer.validated_data["new_password"])
+        user.save()
+
+        return Response({"detail": "เปลี่ยนรหัสผ่านเรียบร้อยแล้ว"}, status=200)

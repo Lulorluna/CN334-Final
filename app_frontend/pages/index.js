@@ -83,11 +83,8 @@ export default function HomePage() {
       <header className="fixed top-0 w-full bg-[#fff8e1] shadow-md z-50">
         <div className="container mx-auto flex items-center justify-between p-4">
           <Link href="/" className="flex items-center gap-2 relative group">
-            <Image src="/images/logo.png" width={65} height={40} alt="Logo" />
-            {/* <span className="font-bold text-[#8b4513] relative">
-              Meal of Hope
-              <span className="absolute left-0 bottom-0 w-0 h-[2px] bg-[#f4d03f] transition-all duration-300 group-hover:w-full"></span>
-            </span> */}
+            <Image src="/images/logo.png" width={70} height={40} alt="Logo" />
+
           </Link>
           <nav className="flex gap-6">
             {['Home', 'About Us', 'Product'].map((text, idx) => {
@@ -161,7 +158,7 @@ export default function HomePage() {
       <div className="h-20" />
 
       <section className="relative h-[600px] w-full">
-        <Image src="/images/banner.jpg" alt="Banner" fill className="object-cover" />
+        <Image src="/images/banner4.jpg" alt="Banner" fill className="object-cover" />
       </section>
 
       <section className="container mx-auto px-4 mt-10">

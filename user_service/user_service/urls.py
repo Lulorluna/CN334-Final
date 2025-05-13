@@ -43,4 +43,5 @@ urlpatterns = [
         PaymentMethodDetailView.as_view(),
         name="paymentmethod-detail",
     ),
+    path("api/change_password/", ChangePasswordView.as_view(), name="change-password"),
 ]

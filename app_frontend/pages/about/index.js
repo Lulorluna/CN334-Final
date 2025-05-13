@@ -90,10 +90,6 @@ export default function AboutPage() {
                 <div className="container mx-auto flex items-center justify-between p-4">
                     <Link href="/" className="flex items-center gap-2 relative group">
                         <Image src="/images/logo.png" width={65} height={40} alt="Logo" />
-                        {/* <span className="font-bold text-[#8b4513] relative">
-                            Meal of Hope
-                            <span className="absolute left-0 bottom-0 w-0 h-[2px] bg-[#f4d03f] transition-all duration-300 group-hover:w-full"></span>
-                            </span> */}
                     </Link>
                     <nav className="flex gap-6">
                         {['Home', 'About Us', 'Product'].map((text, idx) => {
@@ -228,16 +224,16 @@ export default function AboutPage() {
                     </h3>
                     <div className="flex flex-wrap justify-center gap-8">
                         {[
-                            { name: 'ธนศักดิ์ ชนม์เรืองฉาย', id: '6610742410', role: 'System Analyst / Backend Developer' },
-                            { name: 'ณัฏชนน วสุธวัช', id: '6610742279', role: 'Business Analyst / Backend Developer' },
-                            { name: 'ธนภัทร์ แย้มบู่', id: '6610742113', role: 'Frontend Developer' }
+                            { name: 'ธนศักดิ์ ชนม์เรืองฉาย', id: '6610742410', role: 'System Analyst / Backend Developer', image: '/images/taylor.jpg' },
+                            { name: 'ณัฏชนน วสุธวัช', id: '6610742279', role: 'Business Analyst / Backend Developer', image: '/images/pun.jpg' },
+                            { name: 'ธนภัทร์ แย้มบู่', id: '6610742113', role: 'Frontend Developer', image: '/images/it.jpg' }
                         ].map((member, idx) => (
                             <div
                                 key={idx}
                                 className="w-72 bg-white rounded-2xl shadow-lg p-6 text-center hover:shadow-2xl transform hover:-translate-y-2 transition"
                             >
                                 <div className="w-24 h-24 mx-auto mb-4 relative rounded-full overflow-hidden border-4 border-yellow-400">
-                                    <Image src="/images/user-profile.jpg" alt={member.name} fill className="object-cover" />
+                                    <Image src={member.image} alt={member.name} fill className="object-cover" />
                                 </div>
                                 <h4 className="text-xl font-semibold text-gray-800">{member.name}</h4>
                                 <p className="text-sm text-gray-500 mb-1">รหัส: {member.id}</p>
