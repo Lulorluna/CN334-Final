@@ -135,11 +135,11 @@ export default function SummarizePage() {
             <header className="fixed top-0 w-full bg-[#fff8e1] shadow-md z-50">
                 <div className="container mx-auto flex items-center justify-between p-4">
                     <Link href="/" className="flex items-center gap-2 relative group">
-                        <Image src="/images/logo.png" width={40} height={40} alt="Logo" />
-                        <span className="font-bold text-[#8b4513] relative">
+                        <Image src="/images/logo.png" width={65} height={40} alt="Logo" />
+                        {/* <span className="font-bold text-[#8b4513] relative">
                             Meal of Hope
                             <span className="absolute left-0 bottom-0 w-0 h-[2px] bg-[#f4d03f] transition-all duration-300 group-hover:w-full"></span>
-                        </span>
+                            </span> */}
                     </Link>
                     <nav className="flex gap-6">
                         {['Home', 'About Us', 'Product'].map((text, idx) => {
@@ -231,18 +231,32 @@ export default function SummarizePage() {
                     </div>
 
                     <div className="space-y-4">
-                        {cart.map(item => (
-                            <div key={item.id} className="flex items-center justify-between bg-white p-4 rounded-xl shadow hover:shadow-lg">
-                                <div className="flex items-center gap-4">
-                                    <Image src={`/images/product-${item.id}.jpg`} width={80} height={80} alt={item.name} className="rounded-lg" />
-                                    <div>
-                                        <p className="font-bold text-gray-900">{item.name}</p>
-                                        <p className="text-gray-600">฿{item.price.toLocaleString()} x {item.quantity}</p>
+                        {cart.map(item => {
+                            const fileName = item.name
+                                .toLowerCase()
+                                .trim()
+                                + '.jpg';
+                            return (
+                                <div key={item.id} className="flex items-center justify-between bg-white p-4 rounded-xl shadow hover:shadow-lg">
+                                    <div className="flex items-center gap-4">
+                                        <Image
+                                            src={`/images/${fileName}`}
+                                            width={80}
+                                            height={80}
+                                            alt={item.name}
+                                            className="rounded-lg object-cover"
+                                            sizes="80px"
+                                            style={{ width: '80px', height: '80px' }}
+                                        />
+                                        <div>
+                                            <p className="font-bold text-gray-900">{item.name}</p>
+                                            <p className="text-gray-600">฿{item.price.toLocaleString()} x {item.quantity}</p>
+                                        </div>
                                     </div>
+                                    <p className="font-semibold text-lg">฿{(item.price * item.quantity).toLocaleString()}</p>
                                 </div>
-                                <p className="font-semibold text-lg">฿{(item.price * item.quantity).toLocaleString()}</p>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
 
                     <div className="text-right space-y-1 text-lg font-bold">
