@@ -1,7 +1,3 @@
-databases:
-  - name: postgresql
-    plan: free
-    region: singapore
 services:
   # Frontend Service
   - type: web
